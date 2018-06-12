@@ -552,12 +552,14 @@ func TestCatchUp(t *testing.T) {
 		}
 	}
 
-	//wait until node 0 has caught up
+	//wait until node4 has caught up
 	nodes := append(normalNodes, node4)
 	err = bombardAndWait(nodes, target+20, 6*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	//check blocks
 }
 
 func TestShutdown(t *testing.T) {
@@ -625,7 +627,7 @@ func bombardAndWait(nodes []*Node, target int, timeout time.Duration) error {
 	quit := make(chan struct{})
 	makeRandomTransactions(nodes, quit)
 
-	//wait until all nodes have at least 'target' rounds
+	//wait until all nodes have at least 'target' blcoks
 	stopper := time.After(timeout)
 	for {
 		select {
@@ -636,8 +638,8 @@ func bombardAndWait(nodes []*Node, target int, timeout time.Duration) error {
 		time.Sleep(10 * time.Millisecond)
 		done := true
 		for _, n := range nodes {
-			ce := n.core.GetLastConsensusRoundIndex()
-			if ce == nil || *ce < target {
+			ce := n.core.GetLastBlockIndex()
+			if ce < target {
 				done = false
 				break
 			}

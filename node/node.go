@@ -321,6 +321,14 @@ func (n *Node) processFastForwardRequest(rpc net.RPC, cmd *net.FastForwardReques
 	resp.Block = block
 	resp.Frame = frame
 
+	//Get snapshot
+	snapshot, err := n.proxy.GetSnapshot(block.Index())
+	if err != nil {
+		n.logger.WithField("error", err).Error("Getting Snapshot")
+		respErr = err
+	}
+	resp.Snapshot = snapshot
+
 	n.logger.WithFields(logrus.Fields{
 		"Events": len(resp.Frame.Events),
 		"Error":  respErr,
@@ -508,6 +516,14 @@ func (n *Node) fastForward() error {
 		return err
 	}
 
+	//XXX update app from snapshot
+	n.logger.WithField("snapshot", resp.Snapshot).Debug("XXX Snapshot")
+	err = n.proxy.Restore(resp.Snapshot)
+	if err != nil {
+		n.logger.WithField("error", err).Error("Restoring App from Snapshot")
+		return err
+	}
+
 	n.logger.Debug("Fast-Forward OK")
 
 	n.setState(Babbling)
@@ -592,7 +608,6 @@ func (n *Node) commit(block hg.Block) error {
 	//There is no point in using the stateHash if we know it is wrong
 	if err == nil {
 		block.Body.StateHash = stateHash
-
 		n.coreLock.Lock()
 		defer n.coreLock.Unlock()
 		sig, err := n.core.SignBlock(block)
