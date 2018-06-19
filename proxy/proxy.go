@@ -1,6 +1,6 @@
 package proxy
 
-import "github.com/mosaicnetworks/babble/hashgraph"
+import "github.com/champii/babble/hashgraph"
 
 type AppProxy interface {
 	SubmitCh() chan []byte

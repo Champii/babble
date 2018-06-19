@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mosaicnetworks/babble/hashgraph"
+	"github.com/champii/babble/hashgraph"
 )
 
 const (

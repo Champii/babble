@@ -14,14 +14,14 @@ import (
 	"github.com/sirupsen/logrus"
 	cli "gopkg.in/urfave/cli.v1"
 
-	"github.com/mosaicnetworks/babble/crypto"
-	hg "github.com/mosaicnetworks/babble/hashgraph"
-	"github.com/mosaicnetworks/babble/net"
-	"github.com/mosaicnetworks/babble/node"
-	"github.com/mosaicnetworks/babble/proxy"
-	aproxy "github.com/mosaicnetworks/babble/proxy/app"
-	"github.com/mosaicnetworks/babble/service"
-	"github.com/mosaicnetworks/babble/version"
+	"github.com/champii/babble/crypto"
+	hg "github.com/champii/babble/hashgraph"
+	"github.com/champii/babble/net"
+	"github.com/champii/babble/node"
+	"github.com/champii/babble/proxy"
+	aproxy "github.com/champii/babble/proxy/app"
+	"github.com/champii/babble/service"
+	"github.com/champii/babble/version"
 )
 
 var (

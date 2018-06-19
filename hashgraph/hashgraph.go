@@ -9,7 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/mosaicnetworks/babble/common"
+	"github.com/champii/babble/common"
 )
 
 type Hashgraph struct {
@@ -367,6 +367,7 @@ func (h *Hashgraph) InsertEvent(event Event, setWireInfo bool) error {
 	}
 
 	if err := h.CheckSelfParent(event); err != nil {
+		fmt.Println("BABBLE: EVENT", event)
 		return fmt.Errorf("CheckSelfParent: %s", err)
 	}
 

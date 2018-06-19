@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/mosaicnetworks/babble/common"
-	"github.com/mosaicnetworks/babble/crypto"
-	hg "github.com/mosaicnetworks/babble/hashgraph"
+	"github.com/champii/babble/common"
+	"github.com/champii/babble/crypto"
+	hg "github.com/champii/babble/hashgraph"
 )
 
 func TestInit(t *testing.T) {

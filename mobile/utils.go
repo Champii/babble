@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mosaicnetworks/babble/crypto"
+	"github.com/champii/babble/crypto"
 )
 
 func GetPrivPublKeys() string {

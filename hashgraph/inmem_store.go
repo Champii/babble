@@ -3,7 +3,7 @@ package hashgraph
 import (
 	"strconv"
 
-	cm "github.com/mosaicnetworks/babble/common"
+	cm "github.com/champii/babble/common"
 )
 
 type InmemStore struct {

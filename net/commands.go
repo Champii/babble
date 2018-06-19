@@ -1,6 +1,6 @@
 package net
 
-import "github.com/mosaicnetworks/babble/hashgraph"
+import "github.com/champii/babble/hashgraph"
 
 type SyncRequest struct {
 	FromID int

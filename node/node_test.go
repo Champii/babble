@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mosaicnetworks/babble/common"
-	"github.com/mosaicnetworks/babble/crypto"
-	hg "github.com/mosaicnetworks/babble/hashgraph"
-	"github.com/mosaicnetworks/babble/net"
-	aproxy "github.com/mosaicnetworks/babble/proxy/app"
+	"github.com/champii/babble/common"
+	"github.com/champii/babble/crypto"
+	hg "github.com/champii/babble/hashgraph"
+	"github.com/champii/babble/net"
+	aproxy "github.com/champii/babble/proxy/app"
 	"github.com/sirupsen/logrus"
 )
 

@@ -6,8 +6,8 @@ import (
 	"net/rpc/jsonrpc"
 	"time"
 
-	"github.com/mosaicnetworks/babble/hashgraph"
-	bp "github.com/mosaicnetworks/babble/proxy/babble"
+	"github.com/champii/babble/hashgraph"
+	bp "github.com/champii/babble/proxy/babble"
 	"github.com/sirupsen/logrus"
 )
 

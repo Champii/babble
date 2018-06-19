@@ -17,8 +17,8 @@ import (
 
 	"math"
 
-	"github.com/mosaicnetworks/babble/common"
-	"github.com/mosaicnetworks/babble/crypto"
+	"github.com/champii/babble/common"
+	"github.com/champii/babble/crypto"
 )
 
 var (

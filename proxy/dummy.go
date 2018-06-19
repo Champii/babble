@@ -6,9 +6,9 @@ import (
 
 	"time"
 
-	"github.com/mosaicnetworks/babble/crypto"
-	"github.com/mosaicnetworks/babble/hashgraph"
-	bproxy "github.com/mosaicnetworks/babble/proxy/babble"
+	"github.com/champii/babble/crypto"
+	"github.com/champii/babble/hashgraph"
+	bproxy "github.com/champii/babble/proxy/babble"
 	"github.com/sirupsen/logrus"
 )
 
