@@ -2,6 +2,7 @@ package node
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -21,7 +22,7 @@ type Node struct {
 	conf   *Config
 	logger *logrus.Entry
 
-	id       int
+	id       string
 	core     *Core
 	coreLock sync.Mutex
 
@@ -48,7 +49,7 @@ type Node struct {
 }
 
 func NewNode(conf *Config,
-	id int,
+	id string,
 	key *ecdsa.PrivateKey,
 	participants []net.Peer,
 	store hg.Store,
@@ -349,7 +350,7 @@ func (n *Node) gossip(peerAddr string) error {
 	return nil
 }
 
-func (n *Node) pull(peerAddr string) (syncLimit bool, otherKnownEvents map[int]int, err error) {
+func (n *Node) pull(peerAddr string) (syncLimit bool, otherKnownEvents map[string]int, err error) {
 	//Compute Known
 	n.coreLock.Lock()
 	knownEvents := n.core.KnownEvents()
@@ -387,7 +388,7 @@ func (n *Node) pull(peerAddr string) (syncLimit bool, otherKnownEvents map[int]i
 	return false, resp.Known, nil
 }
 
-func (n *Node) push(peerAddr string, knownEvents map[int]int) error {
+func (n *Node) push(peerAddr string, knownEvents map[string]int) error {
 
 	//Check SyncLimit
 	n.coreLock.Lock()
@@ -445,8 +446,7 @@ func (n *Node) fastForward() error {
 	return nil
 }
 
-func (n *Node) requestSync(target string, known map[int]int) (net.SyncResponse, error) {
-
+func (n *Node) requestSync(target string, known map[string]int) (net.SyncResponse, error) {
 	args := net.SyncRequest{
 		FromID: n.id,
 		Known:  known,
@@ -470,10 +470,29 @@ func (n *Node) requestEagerSync(target string, events []hg.WireEvent) (net.Eager
 	return out, err
 }
 
+func (n *Node) validateEventsThroughProxy(events []hg.WireEvent) error {
+	for _, event := range events {
+		for _, tx := range event.Body.Transactions {
+			res, err := n.proxy.ValidateTx(tx)
+			if !res || err != nil {
+				return errors.New("Cannot validate transaction, faulty event: we drop all from that peer")
+			}
+		}
+	}
+
+	return nil
+}
+
 func (n *Node) sync(events []hg.WireEvent) error {
 	//Insert Events in Hashgraph and create new Head if necessary
+
+	err := n.validateEventsThroughProxy(events)
+	if err != nil {
+		return err
+	}
+
 	start := time.Now()
-	err := n.core.Sync(events)
+	err = n.core.Sync(events)
 	elapsed := time.Since(start)
 	n.logger.WithField("duration", elapsed.Nanoseconds()).Debug("Processed Sync()")
 	if err != nil {
@@ -542,6 +561,9 @@ func (n *Node) Shutdown() {
 	}
 }
 
+// func (n *Node) AddPeer(key []byte, addr string) map[string]string {
+// }
+
 func (n *Node) GetStats() map[string]string {
 	toString := func(i *int) string {
 		if i == nil {
@@ -573,7 +595,7 @@ func (n *Node) GetStats() map[string]string {
 		"events_per_second":      strconv.FormatFloat(consensusEventsPerSecond, 'f', 2, 64),
 		"rounds_per_second":      strconv.FormatFloat(consensusRoundsPerSecond, 'f', 2, 64),
 		"round_events":           strconv.Itoa(n.core.GetLastCommitedRoundEventsCount()),
-		"id":                     strconv.Itoa(n.id),
+		"id":                     n.id,
 		"state":                  n.getState().String(),
 	}
 	return s

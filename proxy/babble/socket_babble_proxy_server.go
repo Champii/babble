@@ -27,6 +27,11 @@ type Commit struct {
 	RespChan chan<- CommitResponse
 }
 
+type Validate struct {
+	Tx       []byte
+	RespChan chan<- bool
+}
+
 // Respond is used to respond with a response, error or both
 func (r *Commit) Respond(stateHash []byte, err error) {
 	r.RespChan <- CommitResponse{stateHash, err}
@@ -36,6 +41,7 @@ type SocketBabbleProxyServer struct {
 	netListener *net.Listener
 	rpcServer   *rpc.Server
 	commitCh    chan Commit
+	validateCh  chan Validate
 	timeout     time.Duration
 	logger      *logrus.Logger
 }
@@ -45,9 +51,10 @@ func NewSocketBabbleProxyServer(bindAddress string,
 	logger *logrus.Logger) (*SocketBabbleProxyServer, error) {
 
 	server := &SocketBabbleProxyServer{
-		commitCh: make(chan Commit),
-		timeout:  timeout,
-		logger:   logger,
+		commitCh:   make(chan Commit),
+		validateCh: make(chan Validate),
+		timeout:    timeout,
+		logger:     logger,
 	}
 
 	if err := server.register(bindAddress); err != nil {
@@ -107,6 +114,30 @@ func (p *SocketBabbleProxyServer) CommitBlock(block hashgraph.Block, stateHash *
 		"state_hash": stateHash.Hash,
 		"err":        err,
 	}).Debug("BabbleProxyServer.CommitBlock")
+
+	return
+
+}
+
+func (p *SocketBabbleProxyServer) ValidateTx(tx []byte, res *bool) (err error) {
+	// Send the Commit over
+	respCh := make(chan bool)
+	p.validateCh <- Validate{
+		Tx:       tx,
+		RespChan: respCh,
+	}
+
+	// Wait for a response
+	select {
+	case commitResp := <-respCh:
+		*res = commitResp
+	case <-time.After(p.timeout):
+		err = fmt.Errorf("command timed out")
+	}
+
+	p.logger.WithFields(logrus.Fields{
+		"err": err,
+	}).Debug("BabbleProxyServer.ValidateTx")
 
 	return
 

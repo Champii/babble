@@ -49,3 +49,18 @@ func (p *SocketAppProxyClient) CommitBlock(block hashgraph.Block) ([]byte, error
 
 	return stateHash.Hash, err
 }
+
+func (p *SocketAppProxyClient) ValidateTx(tx []byte) (bool, error) {
+	rpcConn, err := p.getConnection()
+
+	if err != nil {
+		return false, err
+	}
+
+	var res = false
+	err = rpcConn.Call("State.ValidateTx", tx, &res)
+
+	p.logger.WithFields(logrus.Fields{}).Debug("AppProxyClient.ValidateTx")
+
+	return res, err
+}

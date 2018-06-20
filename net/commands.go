@@ -3,25 +3,25 @@ package net
 import "github.com/champii/babble/hashgraph"
 
 type SyncRequest struct {
-	FromID int
-	Known  map[int]int
+	FromID string
+	Known  map[string]int
 }
 
 type SyncResponse struct {
-	FromID    int
+	FromID    string
 	SyncLimit bool
 	Events    []hashgraph.WireEvent
-	Known     map[int]int
+	Known     map[string]int
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 type EagerSyncRequest struct {
-	FromID int
+	FromID string
 	Events []hashgraph.WireEvent
 }
 
 type EagerSyncResponse struct {
-	FromID  int
+	FromID  string
 	Success bool
 }

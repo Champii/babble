@@ -20,7 +20,7 @@ import (
 
 var ip = 9990
 
-func initPeers(n int) ([]*ecdsa.PrivateKey, []net.Peer, map[string]int) {
+func initPeers(n int) ([]*ecdsa.PrivateKey, []net.Peer, map[string]string) {
 	keys := []*ecdsa.PrivateKey{}
 	peers := []net.Peer{}
 
@@ -35,9 +35,9 @@ func initPeers(n int) ([]*ecdsa.PrivateKey, []net.Peer, map[string]int) {
 	}
 
 	sort.Sort(net.ByPubKey(peers))
-	pmap := make(map[string]int)
+	pmap := make(map[string]string)
 	for i, p := range peers {
-		pmap[p.PubKeyHex] = i
+		pmap[p.PubKeyHex] = p.PubKeyHex
 	}
 
 	return keys, peers, pmap
@@ -290,10 +290,10 @@ func TestAddTransaction(t *testing.T) {
 }
 
 func initNodes(n, cacheSize, syncLimit int, storeType string,
-	logger *logrus.Logger, t testing.TB) ([]*ecdsa.PrivateKey, []*Node) {
+	logger *logrus.Logger, t testing.TB) ([]*ecdsa.PrivateKey, map[string]*Node) {
 
 	keys, peers, pmap := initPeers(n)
-	nodes := []*Node{}
+	nodes := make(map[string]*Node)
 	proxies := []*aproxy.InmemAppProxy{}
 	for i := 0; i < len(peers); i++ {
 		conf := NewConfig(5*time.Millisecond, time.Second, cacheSize, syncLimit,
@@ -322,13 +322,13 @@ func initNodes(n, cacheSize, syncLimit int, storeType string,
 		if err := node.Init(false); err != nil {
 			t.Fatalf("failed to initialize node%d: %s", i, err)
 		}
-		nodes = append(nodes, node)
+		nodes[node.id] = node
 		proxies = append(proxies, prox)
 	}
 	return keys, nodes
 }
 
-func recycleNodes(oldNodes []*Node, logger *logrus.Logger, t *testing.T) []*Node {
+func recycleNodes(oldNodes map[string]*Node, logger *logrus.Logger, t *testing.T) []*Node {
 	newNodes := []*Node{}
 	for _, oldNode := range oldNodes {
 		newNode := recycleNode(oldNode, logger, t)
@@ -362,7 +362,7 @@ func recycleNode(oldNode *Node, logger *logrus.Logger, t *testing.T) *Node {
 	return newNode
 }
 
-func runNodes(nodes []*Node, gossip bool) {
+func runNodes(nodes map[string]*Node, gossip bool) {
 	for _, n := range nodes {
 		node := n
 		go func() {
@@ -371,13 +371,13 @@ func runNodes(nodes []*Node, gossip bool) {
 	}
 }
 
-func shutdownNodes(nodes []*Node) {
+func shutdownNodes(nodes map[string]*Node) {
 	for _, n := range nodes {
 		n.Shutdown()
 	}
 }
 
-func deleteStores(nodes []*Node, t *testing.T) {
+func deleteStores(nodes map[string]*Node, t *testing.T) {
 	for _, n := range nodes {
 		if err := os.RemoveAll(n.conf.StorePath); err != nil {
 			t.Fatal(err)
@@ -412,12 +412,17 @@ func TestMissingNodeGossip(t *testing.T) {
 	_, nodes := initNodes(4, 1000, 1000, "inmem", logger, t)
 	defer shutdownNodes(nodes)
 
-	err := gossip(nodes[1:], 10, true, 3*time.Second)
+	for i, n := range nodes {
+		delete(nodes, i)
+		break
+	}
+
+	err := gossip(nodes, 10, true, 3*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	checkGossip(nodes[1:], t)
+	checkGossip(nodes, t)
 }
 
 func TestSyncLimit(t *testing.T) {
@@ -431,22 +436,22 @@ func TestSyncLimit(t *testing.T) {
 	defer shutdownNodes(nodes)
 
 	//create fake node[0] known to artificially reach SyncLimit
-	node0KnownEvents := nodes[0].core.KnownEvents()
+	node0KnownEvents := nodes["0"].core.KnownEvents()
 	for k := range node0KnownEvents {
 		node0KnownEvents[k] = 0
 	}
 
 	args := net.SyncRequest{
-		FromID: nodes[0].id,
+		FromID: nodes["0"].id,
 		Known:  node0KnownEvents,
 	}
 	expectedResp := net.SyncResponse{
-		FromID:    nodes[1].id,
+		FromID:    nodes["1"].id,
 		SyncLimit: true,
 	}
 
 	var out net.SyncResponse
-	if err := nodes[0].trans.Sync(nodes[1].localAddr, &args, &out); err != nil {
+	if err := nodes["0"].trans.Sync(nodes["1"].localAddr, &args, &out); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -465,14 +470,14 @@ func TestShutdown(t *testing.T) {
 
 	runNodes(nodes, false)
 
-	nodes[0].Shutdown()
+	nodes["0"].Shutdown()
 
-	err := nodes[1].gossip(nodes[0].localAddr)
+	err := nodes["1"].gossip(nodes["0"].localAddr)
 	if err == nil {
 		t.Fatal("Expected Timeout Error")
 	}
 
-	nodes[1].Shutdown()
+	nodes["1"].Shutdown()
 }
 
 func TestBootstrapAllNodes(t *testing.T) {
@@ -502,10 +507,10 @@ func TestBootstrapAllNodes(t *testing.T) {
 	shutdownNodes(newNodes)
 
 	//Check that both networks did not have completely different consensus events
-	checkGossip([]*Node{nodes[0], newNodes[0]}, t)
+	checkGossip([]*Node{nodes["0"], newNodes["0"]}, t)
 }
 
-func gossip(nodes []*Node, target int, shutdown bool, timeout time.Duration) error {
+func gossip(nodes map[string]*Node, target int, shutdown bool, timeout time.Duration) error {
 	runNodes(nodes, true)
 	err := bombardAndWait(nodes, target, timeout)
 	if err != nil {
@@ -517,7 +522,7 @@ func gossip(nodes []*Node, target int, shutdown bool, timeout time.Duration) err
 	return nil
 }
 
-func bombardAndWait(nodes []*Node, target int, timeout time.Duration) error {
+func bombardAndWait(nodes map[string]*Node, target int, timeout time.Duration) error {
 	quit := make(chan struct{})
 	makeRandomTransactions(nodes, quit)
 
@@ -546,9 +551,9 @@ func bombardAndWait(nodes []*Node, target int, timeout time.Duration) error {
 	return nil
 }
 
-func checkGossip(nodes []*Node, t *testing.T) {
-	consEvents := map[int][]string{}
-	consTransactions := map[int][][]byte{}
+func checkGossip(nodes map[string]*Node, t *testing.T) {
+	consEvents := map[string][]string{}
+	consTransactions := map[string][][]byte{}
 	for _, n := range nodes {
 		consEvents[n.id] = n.core.GetConsensusEvents()
 		nodeTxs, err := getCommittedTransactions(n)
@@ -572,12 +577,12 @@ func checkGossip(nodes []*Node, t *testing.T) {
 	problem := false
 	t.Logf("min consensus events: %d", minE)
 	for i, e := range consEvents[0][0:minE] {
-		for j := range nodes[1:len(nodes)] {
+		for j := range nodes["1":len(nodes)] {
 			if f := consEvents[j][i]; f != e {
-				er := nodes[0].core.hg.Round(e)
-				err := nodes[0].core.hg.RoundReceived(e)
-				fr := nodes[j].core.hg.Round(f)
-				frr := nodes[j].core.hg.RoundReceived(f)
+				er := nodes["0"].core.hg.Round(e)
+				err := nodes["0"].core.hg.RoundReceived(e)
+				fr := nodes["j"].core.hg.Round(f)
+				frr := nodes["j"].core.hg.RoundReceived(f)
 				t.Logf(
 					"nodes[%d].Consensus[%d] (%s, Round %d, Received %d) and nodes[0].Consensus[%d] (%s, Round %d, Received %d) are not equal",
 					j, i, e[:6], er, err, i, f[:6], fr, frr)
@@ -591,7 +596,13 @@ func checkGossip(nodes []*Node, t *testing.T) {
 
 	t.Logf("min consensus transactions: %d", minT)
 	for i, tx := range consTransactions[0][:minT] {
-		for k := range nodes[1:len(nodes)] {
+
+		for i, n := range nodes {
+			delete(nodes, i)
+			break
+		}
+
+		for k := range nodes {
 			if ot := string(consTransactions[k][i]); ot != string(tx) {
 				t.Fatalf("nodes[%d].ConsensusTransactions[%d] should be '%s' not '%s'", k, i, string(tx), ot)
 			}
@@ -599,7 +610,7 @@ func checkGossip(nodes []*Node, t *testing.T) {
 	}
 }
 
-func makeRandomTransactions(nodes []*Node, quit chan struct{}) {
+func makeRandomTransactions(nodes map[string]*Node, quit chan struct{}) {
 	go func() {
 		seq := make(map[int]int)
 		for {
@@ -608,7 +619,7 @@ func makeRandomTransactions(nodes []*Node, quit chan struct{}) {
 				return
 			default:
 				n := rand.Intn(len(nodes))
-				node := nodes[n]
+				node := nodes["n"]
 				submitTransaction(node, []byte(fmt.Sprintf("node%d transaction %d", n, seq[n])))
 				seq[n] = seq[n] + 1
 				time.Sleep(3 * time.Millisecond)

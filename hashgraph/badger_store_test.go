@@ -14,13 +14,13 @@ import (
 func initBadgerStore(cacheSize int, t *testing.T) (*BadgerStore, []pub) {
 	n := 3
 	participantPubs := []pub{}
-	participants := make(map[string]int)
+	participants := make(map[string]string)
 	for i := 0; i < n; i++ {
 		key, _ := crypto.GenerateECDSAKey()
 		pubKey := crypto.FromECDSAPub(&key.PublicKey)
 		participantPubs = append(participantPubs,
 			pub{i, key, pubKey, fmt.Sprintf("0x%X", pubKey)})
-		participants[fmt.Sprintf("0x%X", pubKey)] = i
+		participants[fmt.Sprintf("0x%X", pubKey)] = string(pubKey)
 	}
 
 	os.RemoveAll("test_data")
@@ -48,10 +48,10 @@ func removeBadgerStore(store *BadgerStore, t *testing.T) {
 }
 
 func createTestDB(dir string, t *testing.T) *BadgerStore {
-	participants := map[string]int{
-		"alice":   0,
-		"bob":     1,
-		"charlie": 2,
+	participants := map[string]string{
+		"alice":   "0",
+		"bob":     "1",
+		"charlie": "2",
 	}
 	cacheSize := 100
 
@@ -127,7 +127,7 @@ func TestLoadBadgerStore(t *testing.T) {
 			t.Fatalf("BadgerStore participants does not contains %s", dbP)
 		}
 		if id != dbID {
-			t.Fatalf("participant %s ID should be %d, not %d", dbP, dbID, id)
+			t.Fatalf("participant %s ID should be %s, not %s", dbP, dbID, id)
 		}
 	}
 
@@ -304,7 +304,7 @@ func TestDBParticipantMethods(t *testing.T) {
 			t.Fatalf("DB does not contain participant %s", p)
 		}
 		if dbID != id {
-			t.Fatalf("DB participant %s should have ID %d, not %d", p, id, dbID)
+			t.Fatalf("DB participant %s should have ID %s, not %s", p, id, dbID)
 		}
 	}
 }

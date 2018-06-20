@@ -16,7 +16,7 @@ import (
 )
 
 type Node struct {
-	nodeID int
+	nodeID string
 	node   *node.Node
 	proxy  proxy.AppProxy
 	logger *logrus.Logger
@@ -60,9 +60,9 @@ func New(privKey string,
 	}
 
 	sort.Sort(net.ByPubKey(netPeers))
-	pmap := make(map[string]int)
-	for i, p := range netPeers {
-		pmap[p.PubKeyHex] = i
+	pmap := make(map[string]string)
+	for _, p := range netPeers {
+		pmap[p.PubKeyHex] = p.PubKeyHex
 	}
 
 	//Find the ID of this node

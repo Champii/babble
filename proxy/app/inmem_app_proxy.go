@@ -9,6 +9,7 @@ import (
 //InmemProxy is used for testing
 type InmemAppProxy struct {
 	submitCh              chan []byte
+	validateCh            chan []byte
 	stateHash             []byte
 	committedTransactions [][]byte
 	logger                *logrus.Logger
@@ -21,6 +22,7 @@ func NewInmemAppProxy(logger *logrus.Logger) *InmemAppProxy {
 	}
 	return &InmemAppProxy{
 		submitCh:              make(chan []byte),
+		validateCh:            make(chan []byte),
 		stateHash:             []byte{},
 		committedTransactions: [][]byte{},
 		logger:                logger,
@@ -50,6 +52,10 @@ func (p *InmemAppProxy) SubmitCh() chan []byte {
 	return p.submitCh
 }
 
+func (p *InmemAppProxy) ValidateCh() chan []byte {
+	return p.validateCh
+}
+
 func (p *InmemAppProxy) CommitBlock(block hashgraph.Block) (stateHash []byte, err error) {
 	p.logger.WithFields(logrus.Fields{
 		"round_received": block.RoundReceived(),
@@ -66,4 +72,8 @@ func (p *InmemAppProxy) SubmitTx(tx []byte) {
 
 func (p *InmemAppProxy) GetCommittedTransactions() [][]byte {
 	return p.committedTransactions
+}
+
+func (p *InmemAppProxy) ValidateTx(tx []byte) (bool, error) {
+	return true, nil
 }

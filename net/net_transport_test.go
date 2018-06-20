@@ -29,30 +29,30 @@ func TestNetworkTransport_Sync(t *testing.T) {
 
 	// Make the RPC request
 	args := SyncRequest{
-		FromID: 0,
-		Known: map[int]int{
-			0: 1,
-			1: 2,
-			2: 3,
+		FromID: "0",
+		Known: map[string]int{
+			"0": 1,
+			"1": 2,
+			"2": 3,
 		},
 	}
 	resp := SyncResponse{
-		FromID: 1,
+		FromID: "1",
 		Events: []hashgraph.WireEvent{
 			hashgraph.WireEvent{
 				Body: hashgraph.WireBody{
 					Transactions:         [][]byte(nil),
 					SelfParentIndex:      1,
-					OtherParentCreatorID: 10,
+					OtherParentCreatorID: "10",
 					OtherParentIndex:     0,
-					CreatorID:            9,
+					CreatorID:            "9",
 				},
 			},
 		},
-		Known: map[int]int{
-			0: 5,
-			1: 5,
-			2: 6,
+		Known: map[string]int{
+			"0": 5,
+			"1": 5,
+			"2": 6,
 		},
 	}
 
@@ -102,21 +102,21 @@ func TestNetworkTransport_EagerSync(t *testing.T) {
 
 	// Make the RPC request
 	args := EagerSyncRequest{
-		FromID: 0,
+		FromID: "0",
 		Events: []hashgraph.WireEvent{
 			hashgraph.WireEvent{
 				Body: hashgraph.WireBody{
 					Transactions:         [][]byte(nil),
 					SelfParentIndex:      1,
-					OtherParentCreatorID: 10,
+					OtherParentCreatorID: "10",
 					OtherParentIndex:     0,
-					CreatorID:            9,
+					CreatorID:            "9",
 				},
 			},
 		},
 	}
 	resp := EagerSyncResponse{
-		FromID:  1,
+		FromID:  "1",
 		Success: true,
 	}
 
@@ -166,30 +166,30 @@ func TestNetworkTransport_PooledConn(t *testing.T) {
 
 	// Make the RPC request
 	args := SyncRequest{
-		FromID: 0,
-		Known: map[int]int{
-			0: 1,
-			1: 2,
-			2: 3,
+		FromID: "0",
+		Known: map[string]int{
+			"0": 1,
+			"1": 2,
+			"2": 3,
 		},
 	}
 	resp := SyncResponse{
-		FromID: 1,
+		FromID: "1",
 		Events: []hashgraph.WireEvent{
 			hashgraph.WireEvent{
 				Body: hashgraph.WireBody{
 					Transactions:         [][]byte(nil),
 					SelfParentIndex:      1,
-					OtherParentCreatorID: 10,
+					OtherParentCreatorID: "10",
 					OtherParentIndex:     0,
-					CreatorID:            9,
+					CreatorID:            "9",
 				},
 			},
 		},
-		Known: map[int]int{
-			0: 5,
-			1: 5,
-			2: 6,
+		Known: map[string]int{
+			"0": 5,
+			"1": 5,
+			"2": 6,
 		},
 	}
 

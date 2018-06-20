@@ -48,3 +48,7 @@ func (p *SocketAppProxy) SubmitCh() chan []byte {
 func (p *SocketAppProxy) CommitBlock(block hashgraph.Block) ([]byte, error) {
 	return p.client.CommitBlock(block)
 }
+
+func (p *SocketAppProxy) ValidateTx(tx []byte) (bool, error) {
+	return p.client.ValidateTx(tx)
+}

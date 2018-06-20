@@ -8,7 +8,7 @@ import (
 
 type InmemStore struct {
 	cacheSize              int
-	participants           map[string]int
+	participants           map[string]string
 	eventCache             *cm.LRU
 	roundCache             *cm.LRU
 	blockCache             *cm.LRU
@@ -19,7 +19,7 @@ type InmemStore struct {
 	lastRound              int
 }
 
-func NewInmemStore(participants map[string]int, cacheSize int) *InmemStore {
+func NewInmemStore(participants map[string]string, cacheSize int) *InmemStore {
 	roots := make(map[string]Root)
 	for pk := range participants {
 		roots[pk] = NewBaseRoot()
@@ -41,7 +41,7 @@ func (s *InmemStore) CacheSize() int {
 	return s.cacheSize
 }
 
-func (s *InmemStore) Participants() (map[string]int, error) {
+func (s *InmemStore) Participants() (map[string]string, error) {
 	return s.participants, nil
 }
 
@@ -101,7 +101,7 @@ func (s *InmemStore) LastEventFrom(participant string) (last string, isRoot bool
 	return
 }
 
-func (s *InmemStore) KnownEvents() map[int]int {
+func (s *InmemStore) KnownEvents() map[string]int {
 	return s.participantEventsCache.Known()
 }
 

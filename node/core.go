@@ -13,16 +13,17 @@ import (
 )
 
 type Core struct {
-	id     int
+	id     string
 	key    *ecdsa.PrivateKey
 	pubKey []byte
 	hexID  string
 	hg     *hg.Hashgraph
 
-	participants        map[string]int //[PubKey] => id
-	reverseParticipants map[int]string //[id] => PubKey
-	Head                string
-	Seq                 int
+	participants map[string]string
+	// participants        map[string]int //[PubKey] => id
+	// reverseParticipants map[int]string //[id] => PubKey
+	Head string
+	Seq  int
 
 	transactionPool    [][]byte
 	blockSignaturePool []hg.BlockSignature
@@ -31,9 +32,9 @@ type Core struct {
 }
 
 func NewCore(
-	id int,
+	id string,
 	key *ecdsa.PrivateKey,
-	participants map[string]int,
+	participants map[string]string,
 	store hg.Store,
 	commitCh chan hg.Block,
 	logger *logrus.Logger) Core {
@@ -42,25 +43,20 @@ func NewCore(
 		logger.Level = logrus.DebugLevel
 	}
 
-	reverseParticipants := make(map[int]string)
-	for pk, id := range participants {
-		reverseParticipants[id] = pk
-	}
-
 	core := Core{
-		id:                  id,
-		key:                 key,
-		hg:                  hg.NewHashgraph(participants, store, commitCh, logger),
-		participants:        participants,
-		reverseParticipants: reverseParticipants,
-		transactionPool:     [][]byte{},
-		blockSignaturePool:  []hg.BlockSignature{},
-		logger:              logger,
+		id:           id,
+		key:          key,
+		hg:           hg.NewHashgraph(participants, store, commitCh, logger),
+		participants: participants,
+		// reverseParticipants: reverseParticipants,
+		transactionPool:    [][]byte{},
+		blockSignaturePool: []hg.BlockSignature{},
+		logger:             logger,
 	}
 	return core
 }
 
-func (c *Core) ID() int {
+func (c *Core) ID() string {
 	return c.id
 }
 
@@ -152,7 +148,7 @@ func (c *Core) InsertEvent(event hg.Event, setWireInfo bool) error {
 	return nil
 }
 
-func (c *Core) KnownEvents() map[int]int {
+func (c *Core) KnownEvents() map[string]int {
 	return c.hg.KnownEvents()
 }
 
@@ -171,7 +167,7 @@ func (c *Core) SignBlock(block hg.Block) (hg.BlockSignature, error) {
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-func (c *Core) OverSyncLimit(knownEvents map[int]int, syncLimit int) bool {
+func (c *Core) OverSyncLimit(knownEvents map[string]int, syncLimit int) bool {
 	totUnknown := 0
 	myKnownEvents := c.KnownEvents()
 	for i, li := range myKnownEvents {
@@ -190,13 +186,13 @@ func (c *Core) GetFrame() (hg.Frame, error) {
 }
 
 //returns events that c knowns about and are not in 'known'
-func (c *Core) EventDiff(known map[int]int) (events []hg.Event, err error) {
+func (c *Core) EventDiff(known map[string]int) (events []hg.Event, err error) {
 	unknown := []hg.Event{}
 	//known represents the indez of the last event known for every participant
 	//compare this to our view of events and fill unknown with events that we know of
 	// and the other doesnt
 	for id, ct := range known {
-		pk := c.reverseParticipants[id]
+		pk := c.participants[id]
 		//get participant Events with index > ct
 		participantEvents, err := c.hg.Store.ParticipantEvents(pk, ct)
 		if err != nil {

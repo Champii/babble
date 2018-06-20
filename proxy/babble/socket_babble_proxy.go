@@ -49,6 +49,10 @@ func (p *SocketBabbleProxy) CommitCh() chan Commit {
 	return p.server.commitCh
 }
 
+func (p *SocketBabbleProxy) ValidateCh() chan Validate {
+	return p.server.validateCh
+}
+
 func (p *SocketBabbleProxy) SubmitTx(tx []byte) error {
 	ack, err := p.client.SubmitTx(tx)
 	if err != nil {

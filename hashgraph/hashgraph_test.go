@@ -109,9 +109,9 @@ func initHashgraph(t *testing.T) (*Hashgraph, map[string]string) {
 		nodes[p.to].signAndAddEvent(e, p.name, index, orderedEvents)
 	}
 
-	participants := make(map[string]int)
+	participants := make(map[string]string)
 	for _, node := range nodes {
-		participants[node.PubHex] = node.ID
+		participants[node.PubHex] = node.PubHex
 	}
 
 	store := NewInmemStore(participants, cacheSize)
@@ -318,13 +318,13 @@ and yet they are both ancestors of event e20
 func TestFork(t *testing.T) {
 	index := make(map[string]string)
 	nodes := []Node{}
-	participants := make(map[string]int)
+	participants := make(map[string]string)
 
 	for i := 0; i < n; i++ {
 		key, _ := crypto.GenerateECDSAKey()
 		node := NewNode(key, i)
 		nodes = append(nodes, node)
-		participants[node.PubHex] = node.ID
+		participants[node.PubHex] = node.PubHex
 	}
 
 	store := NewInmemStore(participants, cacheSize)
@@ -415,9 +415,9 @@ func initRoundHashgraph(t *testing.T) (*Hashgraph, map[string]string) {
 		nodes[p.to].signAndAddEvent(e, p.name, index, orderedEvents)
 	}
 
-	participants := make(map[string]int)
+	participants := make(map[string]string)
 	for _, node := range nodes {
-		participants[node.PubHex] = node.ID
+		participants[node.PubHex] = node.PubHex
 	}
 
 	hashgraph := NewHashgraph(participants, NewInmemStore(participants, cacheSize), nil, common.NewTestLogger(t))
@@ -442,7 +442,7 @@ func TestInsertEvent(t *testing.T) {
 	}
 
 	if !(e0.Body.selfParentIndex == -1 &&
-		e0.Body.otherParentCreatorID == -1 &&
+		e0.Body.otherParentCreatorID == "" &&
 		e0.Body.otherParentIndex == -1 &&
 		e0.Body.creatorID == h.Participants[e0.Creator()]) {
 		t.Fatalf("Invalid wire info on e0")
@@ -887,9 +887,9 @@ func initBlockHashgraph(t *testing.T) (*Hashgraph, []Node, map[string]string) {
 		nodes = append(nodes, node)
 	}
 
-	participants := make(map[string]int)
+	participants := make(map[string]string)
 	for _, node := range nodes {
-		participants[node.PubHex] = node.ID
+		participants[node.PubHex] = node.PubHex
 	}
 
 	hashgraph := NewHashgraph(participants, NewInmemStore(participants, cacheSize), nil, common.NewTestLogger(t))
@@ -1120,9 +1120,9 @@ func initConsensusHashgraph(db bool, logger *logrus.Logger) (*Hashgraph, map[str
 		nodes[p.to].signAndAddEvent(e, p.name, index, orderedEvents)
 	}
 
-	participants := make(map[string]int)
+	participants := make(map[string]string)
 	for _, node := range nodes {
-		participants[node.PubHex] = node.ID
+		participants[node.PubHex] = node.PubHex
 	}
 
 	var store Store
@@ -1292,16 +1292,16 @@ func BenchmarkFindOrder(b *testing.B) {
 func TestKnown(t *testing.T) {
 	h, _ := initConsensusHashgraph(false, common.NewTestLogger(t))
 
-	expectedKnown := map[int]int{
-		0: 8,
-		1: 7,
-		2: 7,
+	expectedKnown := map[string]int{
+		"0": 8,
+		"1": 7,
+		"2": 7,
 	}
 
 	known := h.KnownEvents()
 	for _, id := range h.Participants {
 		if l := known[id]; l != expectedKnown[id] {
-			t.Fatalf("Known[%d] should be %d, not %d", id, expectedKnown[id], l)
+			t.Fatalf("Known[%s] should be %d, not %d", id, expectedKnown[id], l)
 		}
 	}
 }
@@ -1327,7 +1327,7 @@ func TestReset(t *testing.T) {
 	}
 
 	roots := map[string]Root{}
-	roots[h.ReverseParticipants[0]] = Root{
+	roots[h.Participants["0"]] = Root{
 		X:     index["f02b"],
 		Y:     index["g1"],
 		Index: 4,
@@ -1336,13 +1336,13 @@ func TestReset(t *testing.T) {
 			index["o02"]: index["f21"],
 		},
 	}
-	roots[h.ReverseParticipants[1]] = Root{
+	roots[h.Participants["1"]] = Root{
 		X:     index["f10"],
 		Y:     index["f02b"],
 		Index: 4,
 		Round: 2,
 	}
-	roots[h.ReverseParticipants[2]] = Root{
+	roots[h.Participants["2"]] = Root{
 		X:     index["f21"],
 		Y:     index["g1"],
 		Index: 4,
@@ -1363,16 +1363,16 @@ func TestReset(t *testing.T) {
 		}
 	}
 
-	expectedKnown := map[int]int{
-		0: 8,
-		1: 7,
-		2: 7,
+	expectedKnown := map[string]int{
+		"0": 8,
+		"1": 7,
+		"2": 7,
 	}
 
 	known := h.KnownEvents()
 	for _, id := range h.Participants {
 		if l := known[id]; l != expectedKnown[id] {
-			t.Fatalf("Known[%d] should be %d, not %d", id, expectedKnown[id], l)
+			t.Fatalf("Known[%s] should be %d, not %d", id, expectedKnown[id], l)
 		}
 	}
 }
@@ -1385,21 +1385,21 @@ func TestGetFrame(t *testing.T) {
 	h.FindOrder()
 
 	expectedRoots := map[string]Root{}
-	expectedRoots[h.ReverseParticipants[0]] = Root{
+	expectedRoots[h.Participants["0"]] = Root{
 		X:      index["e02"],
 		Y:      index["f1b"],
 		Index:  1,
 		Round:  0,
 		Others: map[string]string{},
 	}
-	expectedRoots[h.ReverseParticipants[1]] = Root{
+	expectedRoots[h.Participants["1"]] = Root{
 		X:      index["e10"],
 		Y:      index["e02"],
 		Index:  1,
 		Round:  0,
 		Others: map[string]string{},
 	}
-	expectedRoots[h.ReverseParticipants[2]] = Root{
+	expectedRoots[h.Participants["2"]] = Root{
 		X:      index["e21b"],
 		Y:      index["f1b"],
 		Index:  2,
@@ -1436,9 +1436,9 @@ func TestGetFrame(t *testing.T) {
 	}
 
 	skip := map[string]int{
-		h.ReverseParticipants[0]: 1,
-		h.ReverseParticipants[1]: 1,
-		h.ReverseParticipants[2]: 2,
+		h.Participants["0"]: 1,
+		h.Participants["1"]: 1,
+		h.Participants["2"]: 2,
 	}
 
 	expectedEvents := []Event{}
@@ -1486,16 +1486,16 @@ func TestResetFromFrame(t *testing.T) {
 		}
 	}
 
-	expectedKnown := map[int]int{
-		0: 8,
-		1: 7,
-		2: 7,
+	expectedKnown := map[string]int{
+		"0": 8,
+		"1": 7,
+		"2": 7,
 	}
 
 	known := h.KnownEvents()
 	for _, id := range h.Participants {
 		if l := known[id]; l != expectedKnown[id] {
-			t.Fatalf("Known[%d] should be %d, not %d", id, expectedKnown[id], l)
+			t.Fatalf("Known[%s] should be %d, not %d", id, expectedKnown[id], l)
 		}
 	}
 
@@ -1679,9 +1679,9 @@ func initFunkyHashgraph(logger *logrus.Logger) (*Hashgraph, map[string]string) {
 		nodes[p.to].signAndAddEvent(e, p.name, index, orderedEvents)
 	}
 
-	participants := make(map[string]int)
+	participants := make(map[string]string)
 	for _, node := range nodes {
-		participants[node.PubHex] = node.ID
+		participants[node.PubHex] = node.PubHex
 	}
 
 	hashgraph := NewHashgraph(participants,

@@ -19,13 +19,13 @@ type pub struct {
 func initInmemStore(cacheSize int) (*InmemStore, []pub) {
 	n := 3
 	participantPubs := []pub{}
-	participants := make(map[string]int)
+	participants := make(map[string]string)
 	for i := 0; i < n; i++ {
 		key, _ := crypto.GenerateECDSAKey()
 		pubKey := crypto.FromECDSAPub(&key.PublicKey)
 		participantPubs = append(participantPubs,
 			pub{i, key, pubKey, fmt.Sprintf("0x%X", pubKey)})
-		participants[fmt.Sprintf("0x%X", pubKey)] = i
+		participants[fmt.Sprintf("0x%X", pubKey)] = fmt.Sprintf("0x%X", pubKey)
 	}
 
 	store := NewInmemStore(participants, cacheSize)

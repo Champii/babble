@@ -11,10 +11,10 @@ import (
 func TestParticipantEventsCache(t *testing.T) {
 	size := 10
 	testSize := 25
-	participants := map[string]int{
-		"alice":   0,
-		"bob":     1,
-		"charlie": 2,
+	participants := map[string]string{
+		"alice":   "0",
+		"bob":     "1",
+		"charlie": "2",
 	}
 	pec := NewParticipantEventsCache(size, participants)
 
@@ -70,7 +70,7 @@ func TestParticipantEventsCache(t *testing.T) {
 	for p, k := range known {
 		expectedLastIndex := testSize - 1
 		if k != expectedLastIndex {
-			t.Errorf("Known[%d] should be %d, not %d", p, expectedLastIndex, k)
+			t.Errorf("Known[%s] should be %d, not %d", p, expectedLastIndex, k)
 		}
 	}
 
@@ -115,10 +115,10 @@ func TestParticipantEventsCache(t *testing.T) {
 func TestParticipantEventsCacheEdge(t *testing.T) {
 	size := 10
 	testSize := 11
-	participants := map[string]int{
-		"alice":   0,
-		"bob":     1,
-		"charlie": 2,
+	participants := map[string]string{
+		"alice":   "0",
+		"bob":     "1",
+		"charlie": "2",
 	}
 	pec := NewParticipantEventsCache(size, participants)
 

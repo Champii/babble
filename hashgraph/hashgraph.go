@@ -13,18 +13,18 @@ import (
 )
 
 type Hashgraph struct {
-	Participants            map[string]int //[public key] => id
-	ReverseParticipants     map[int]string //[id] => public key
-	Store                   Store          //store of Events and Rounds
-	UndeterminedEvents      []string       //[index] => hash
-	UndecidedRounds         []int          //queue of Rounds which have undecided witnesses
-	LastConsensusRound      *int           //index of last round where the fame of all witnesses has been decided
-	LastBlockIndex          int            //index of last block
-	LastCommitedRoundEvents int            //number of events in round before LastConsensusRound
-	ConsensusTransactions   int            //number of consensus transactions
-	PendingLoadedEvents     int            //number of loaded events that are not yet committed
-	commitCh                chan Block     //channel for committing Blocks
-	topologicalIndex        int            //counter used to order events in topological order
+	Participants map[string]string //[public key] => id
+	// ReverseParticipants     map[int]string    //[id] => public key
+	Store                   Store      //store of Events and Rounds
+	UndeterminedEvents      []string   //[index] => hash
+	UndecidedRounds         []int      //queue of Rounds which have undecided witnesses
+	LastConsensusRound      *int       //index of last round where the fame of all witnesses has been decided
+	LastBlockIndex          int        //index of last block
+	LastCommitedRoundEvents int        //number of events in round before LastConsensusRound
+	ConsensusTransactions   int        //number of consensus transactions
+	PendingLoadedEvents     int        //number of loaded events that are not yet committed
+	commitCh                chan Block //channel for committing Blocks
+	topologicalIndex        int        //counter used to order events in topological order
 	superMajority           int
 
 	ancestorCache           *common.LRU
@@ -37,21 +37,21 @@ type Hashgraph struct {
 	logger *logrus.Logger
 }
 
-func NewHashgraph(participants map[string]int, store Store, commitCh chan Block, logger *logrus.Logger) *Hashgraph {
+func NewHashgraph(participants map[string]string, store Store, commitCh chan Block, logger *logrus.Logger) *Hashgraph {
 	if logger == nil {
 		logger = logrus.New()
 		logger.Level = logrus.DebugLevel
 	}
 
-	reverseParticipants := make(map[int]string)
-	for pk, id := range participants {
-		reverseParticipants[id] = pk
-	}
+	// reverseParticipants := make(map[int]string)
+	// for pk, id := range participants {
+	// 	reverseParticipants[id] = pk
+	// }
 
 	cacheSize := store.CacheSize()
 	hashgraph := Hashgraph{
-		Participants:            participants,
-		ReverseParticipants:     reverseParticipants,
+		Participants: participants,
+		// ReverseParticipants:     reverseParticipants,
 		Store:                   store,
 		commitCh:                commitCh,
 		ancestorCache:           common.NewLRU(cacheSize, nil),
@@ -193,8 +193,8 @@ func (h *Hashgraph) stronglySee(x, y string) bool {
 	}
 
 	c := 0
-	for i := 0; i < len(ex.lastAncestors); i++ {
-		if ex.lastAncestors[i].index >= ey.firstDescendants[i].index {
+	for hash := range ex.lastAncestors {
+		if ex.lastAncestors[hash].index >= ey.firstDescendants[hash].index {
 			c++
 		}
 	}
@@ -501,37 +501,54 @@ func (h *Hashgraph) CheckOtherParent(event Event) error {
 func (h *Hashgraph) InitEventCoordinates(event *Event) error {
 	members := len(h.Participants)
 
-	event.firstDescendants = make([]EventCoordinates, members)
-	for id := 0; id < members; id++ {
+	event.firstDescendants = make(map[string]EventCoordinates, members)
+	for id := range h.Participants {
 		event.firstDescendants[id] = EventCoordinates{
 			index: math.MaxInt32,
 		}
 	}
 
-	event.lastAncestors = make([]EventCoordinates, members)
+	event.lastAncestors = make(map[string]EventCoordinates, members)
 
 	selfParent, selfParentError := h.Store.GetEvent(event.SelfParent())
 	otherParent, otherParentError := h.Store.GetEvent(event.OtherParent())
 
 	if selfParentError != nil && otherParentError != nil {
-		for id := 0; id < members; id++ {
+		for id := range h.Participants {
 			event.lastAncestors[id] = EventCoordinates{
 				index: -1,
 			}
 		}
 	} else if selfParentError != nil {
-		copy(event.lastAncestors[:members], otherParent.lastAncestors)
+		otherParent.lastAncestors = make(map[string]EventCoordinates)
+		for id, val := range event.lastAncestors {
+			otherParent.lastAncestors[id] = val
+		}
+
+		// copy(event.lastAncestors[:members], otherParent.lastAncestors)
 	} else if otherParentError != nil {
-		copy(event.lastAncestors[:members], selfParent.lastAncestors)
+		selfParent.lastAncestors = make(map[string]EventCoordinates)
+		for id, val := range event.lastAncestors {
+			selfParent.lastAncestors[id] = val
+		}
+		// copy(event.lastAncestors[:members], selfParent.lastAncestors)
 	} else {
-		selfParentLastAncestors := selfParent.lastAncestors
+		// selfParentLastAncestors := selfParent.lastAncestors
 		otherParentLastAncestors := otherParent.lastAncestors
 
-		copy(event.lastAncestors[:members], selfParentLastAncestors)
-		for i := 0; i < members; i++ {
-			if event.lastAncestors[i].index < otherParentLastAncestors[i].index {
-				event.lastAncestors[i].index = otherParentLastAncestors[i].index
-				event.lastAncestors[i].hash = otherParentLastAncestors[i].hash
+		selfParent.lastAncestors = make(map[string]EventCoordinates)
+		for id, val := range event.lastAncestors {
+			selfParent.lastAncestors[id] = val
+		}
+
+		// copy(event.lastAncestors[:members], selfParentLastAncestors)
+		for hash := range h.Participants {
+			// TODO: CHECK HERE THAT THE VALUE IS WELL UPDATED IN THE MAP
+			// THIS IS A WORKAROUND
+			eventLastAncestors := event.lastAncestors[hash]
+			if eventLastAncestors.index < otherParentLastAncestors[hash].index {
+				eventLastAncestors.index = otherParentLastAncestors[hash].index
+				eventLastAncestors.hash = otherParentLastAncestors[hash].hash
 			}
 		}
 	}
@@ -560,8 +577,8 @@ func (h *Hashgraph) UpdateAncestorFirstDescendant(event Event) error {
 	index := event.Index()
 	hash := event.Hex()
 
-	for i := 0; i < len(event.lastAncestors); i++ {
-		ah := event.lastAncestors[i].hash
+	for name := range event.lastAncestors {
+		ah := event.lastAncestors[name].hash
 		for ah != "" {
 			a, err := h.Store.GetEvent(ah)
 			if err != nil {
@@ -584,7 +601,7 @@ func (h *Hashgraph) UpdateAncestorFirstDescendant(event Event) error {
 
 func (h *Hashgraph) SetWireInfo(event *Event) error {
 	selfParentIndex := -1
-	otherParentCreatorID := -1
+	otherParentCreatorID := ""
 	otherParentIndex := -1
 
 	//could be the first Event inserted for this creator. In this case, use Root
@@ -624,7 +641,7 @@ func (h *Hashgraph) ReadWireInfo(wevent WireEvent) (*Event, error) {
 	otherParent := ""
 	var err error
 
-	creator := h.ReverseParticipants[wevent.Body.CreatorID]
+	creator := h.Participants[wevent.Body.CreatorID]
 	creatorBytes, err := hex.DecodeString(creator[2:])
 	if err != nil {
 		return nil, err
@@ -637,7 +654,7 @@ func (h *Hashgraph) ReadWireInfo(wevent WireEvent) (*Event, error) {
 		}
 	}
 	if wevent.Body.OtherParentIndex >= 0 {
-		otherParentCreator := h.ReverseParticipants[wevent.Body.OtherParentCreatorID]
+		otherParentCreator := h.Participants[wevent.Body.OtherParentCreatorID]
 		otherParent, err = h.Store.ParticipantEvent(otherParentCreator, wevent.Body.OtherParentIndex)
 		if err != nil {
 			return nil, err
@@ -945,7 +962,7 @@ func (h *Hashgraph) ConsensusEvents() []string {
 }
 
 //last event index per participant
-func (h *Hashgraph) KnownEvents() map[int]int {
+func (h *Hashgraph) KnownEvents() map[string]int {
 	return h.Store.KnownEvents()
 }
 

@@ -21,9 +21,9 @@ type EventBody struct {
 	//wire
 	//It is cheaper to send ints then hashes over the wire
 	selfParentIndex      int
-	otherParentCreatorID int
+	otherParentCreatorID string
 	otherParentIndex     int
-	creatorID            int
+	creatorID            string
 }
 
 //json encoding of body only
@@ -67,8 +67,8 @@ type Event struct {
 	roundReceived      *int
 	consensusTimestamp time.Time
 
-	lastAncestors    []EventCoordinates //[participant fake id] => last ancestor
-	firstDescendants []EventCoordinates //[participant fake id] => first descendant
+	lastAncestors    map[string]EventCoordinates //[participant fake id] => last ancestor
+	firstDescendants map[string]EventCoordinates //[participant fake id] => first descendant
 
 	creator string
 	hash    []byte
@@ -210,10 +210,10 @@ func (e *Event) SetRoundReceived(rr int) {
 	*e.roundReceived = rr
 }
 
-func (e *Event) SetWireInfo(selfParentIndex,
-	otherParentCreatorID,
-	otherParentIndex,
-	creatorID int) {
+func (e *Event) SetWireInfo(selfParentIndex int,
+	otherParentCreatorID string,
+	otherParentIndex int,
+	creatorID string) {
 	e.Body.selfParentIndex = selfParentIndex
 	e.Body.otherParentCreatorID = otherParentCreatorID
 	e.Body.otherParentIndex = otherParentIndex
@@ -283,9 +283,9 @@ type WireBody struct {
 	BlockSignatures []WireBlockSignature
 
 	SelfParentIndex      int
-	OtherParentCreatorID int
+	OtherParentCreatorID string
 	OtherParentIndex     int
-	CreatorID            int
+	CreatorID            string
 
 	Timestamp time.Time
 	Index     int

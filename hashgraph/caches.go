@@ -27,8 +27,8 @@ func NewBaseParentRoundInfo() ParentRoundInfo {
 	}
 }
 
-func getValues(mapping map[string]int) []int {
-	keys := make([]int, len(mapping))
+func getValues(mapping map[string]string) []string {
+	keys := make([]string, len(mapping))
 	i := 0
 	for _, id := range mapping {
 		keys[i] = id
@@ -40,21 +40,21 @@ func getValues(mapping map[string]int) []int {
 //------------------------------------------------------------------------------
 
 type ParticipantEventsCache struct {
-	participants map[string]int
+	participants map[string]string
 	rim          *cm.RollingIndexMap
 }
 
-func NewParticipantEventsCache(size int, participants map[string]int) *ParticipantEventsCache {
+func NewParticipantEventsCache(size int, participants map[string]string) *ParticipantEventsCache {
 	return &ParticipantEventsCache{
 		participants: participants,
 		rim:          cm.NewRollingIndexMap(size, getValues(participants)),
 	}
 }
 
-func (pec *ParticipantEventsCache) participantID(participant string) (int, error) {
+func (pec *ParticipantEventsCache) participantID(participant string) (string, error) {
 	id, ok := pec.participants[participant]
 	if !ok {
-		return -1, cm.NewStoreErr(cm.UnknownParticipant, participant)
+		return "", cm.NewStoreErr(cm.UnknownParticipant, participant)
 	}
 	return id, nil
 }
@@ -101,19 +101,16 @@ func (pec *ParticipantEventsCache) GetLast(participant string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return last.(string), nil
 }
 
 func (pec *ParticipantEventsCache) Set(participant string, hash string, index int) error {
-	id, err := pec.participantID(participant)
-	if err != nil {
-		return err
-	}
-	return pec.rim.Set(id, hash, index)
+	return pec.rim.Set(participant, hash, index)
 }
 
 //returns [participant id] => lastKnownIndex
-func (pec *ParticipantEventsCache) Known() map[int]int {
+func (pec *ParticipantEventsCache) Known() map[string]int {
 	return pec.rim.Known()
 }
 
@@ -124,33 +121,28 @@ func (pec *ParticipantEventsCache) Reset() error {
 //------------------------------------------------------------------------------
 
 type ParticipantBlockSignaturesCache struct {
-	participants map[string]int
+	participants map[string]string
 	rim          *cm.RollingIndexMap
 }
 
-func NewParticipantBlockSignaturesCache(size int, participants map[string]int) *ParticipantBlockSignaturesCache {
+func NewParticipantBlockSignaturesCache(size int, participants map[string]string) *ParticipantBlockSignaturesCache {
 	return &ParticipantBlockSignaturesCache{
 		participants: participants,
 		rim:          cm.NewRollingIndexMap(size, getValues(participants)),
 	}
 }
 
-func (psc *ParticipantBlockSignaturesCache) participantID(participant string) (int, error) {
-	id, ok := psc.participants[participant]
-	if !ok {
-		return -1, cm.NewStoreErr(cm.UnknownParticipant, participant)
-	}
-	return id, nil
-}
+// func (psc *ParticipantBlockSignaturesCache) participantID(participant string) (string, error) {
+// id, ok := psc.participants[participant]
+// if !ok {
+// 	return -1, cm.NewStoreErr(cm.UnknownParticipant, participant)
+// }
+// return id, nil
+// }
 
 //return participant BlockSignatures where index > skip
 func (psc *ParticipantBlockSignaturesCache) Get(participant string, skipIndex int) ([]BlockSignature, error) {
-	id, err := psc.participantID(participant)
-	if err != nil {
-		return []BlockSignature{}, err
-	}
-
-	ps, err := psc.rim.Get(id, skipIndex)
+	ps, err := psc.rim.Get(participant, skipIndex)
 	if err != nil {
 		return []BlockSignature{}, err
 	}
@@ -163,12 +155,7 @@ func (psc *ParticipantBlockSignaturesCache) Get(participant string, skipIndex in
 }
 
 func (psc *ParticipantBlockSignaturesCache) GetItem(participant string, index int) (BlockSignature, error) {
-	id, err := psc.participantID(participant)
-	if err != nil {
-		return BlockSignature{}, err
-	}
-
-	item, err := psc.rim.GetItem(id, index)
+	item, err := psc.rim.GetItem(participant, index)
 	if err != nil {
 		return BlockSignature{}, err
 	}
@@ -184,16 +171,11 @@ func (psc *ParticipantBlockSignaturesCache) GetLast(participant string) (BlockSi
 }
 
 func (psc *ParticipantBlockSignaturesCache) Set(participant string, sig BlockSignature) error {
-	id, err := psc.participantID(participant)
-	if err != nil {
-		return err
-	}
-
-	return psc.rim.Set(id, sig, sig.Index)
+	return psc.rim.Set(participant, sig, sig.Index)
 }
 
 //returns [participant id] => last BlockSignature Index
-func (psc *ParticipantBlockSignaturesCache) Known() map[int]int {
+func (psc *ParticipantBlockSignaturesCache) Known() map[string]int {
 	return psc.rim.Known()
 }
 

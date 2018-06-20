@@ -49,3 +49,7 @@ func (p *mobileAppProxy) CommitBlock(block hashgraph.Block) ([]byte, error) {
 	stateHash := p.commitHandler.OnCommit(blockBytes)
 	return stateHash, nil
 }
+
+func (p *mobileAppProxy) ValidateTx(tx []byte) (bool, error) {
+	return true, nil
+}

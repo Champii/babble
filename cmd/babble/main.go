@@ -215,9 +215,9 @@ func run(c *cli.Context) error {
 	//Sort peers by public key and assign them an int ID
 	//Every participant in the network will run this and assign the same IDs
 	sort.Sort(net.ByPubKey(peers))
-	pmap := make(map[string]int)
-	for i, p := range peers {
-		pmap[p.PubKeyHex] = i
+	pmap := make(map[string]string)
+	for _, p := range peers {
+		pmap[p.PubKeyHex] = p.PubKeyHex
 	}
 
 	//Find the ID of this node

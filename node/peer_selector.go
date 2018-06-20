@@ -1,7 +1,6 @@
 package node
 
 import (
-	"fmt"
 	"math/rand"
 
 	"github.com/champii/babble/net"
@@ -41,7 +40,7 @@ func (ps *RandomPeerSelector) Next() net.Peer {
 	if len(selectablePeers) > 1 {
 		_, selectablePeers = net.ExcludePeer(selectablePeers, ps.last)
 	}
-	fmt.Println("BABBLE SELECTABLE PEERS", selectablePeers)
+
 	i := rand.Intn(len(selectablePeers))
 	peer := selectablePeers[i]
 	return peer

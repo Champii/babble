@@ -2,13 +2,13 @@ package hashgraph
 
 type Store interface {
 	CacheSize() int
-	Participants() (map[string]int, error)
+	Participants() (map[string]string, error)
 	GetEvent(string) (Event, error)
 	SetEvent(Event) error
 	ParticipantEvents(string, int) ([]string, error)
 	ParticipantEvent(string, int) (string, error)
 	LastEventFrom(string) (string, bool, error)
-	KnownEvents() map[int]int
+	KnownEvents() map[string]int
 	ConsensusEvents() []string
 	ConsensusEventsCount() int
 	AddConsensusEvent(string) error
