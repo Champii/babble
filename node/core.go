@@ -125,6 +125,13 @@ func (c *Core) Bootstrap() error {
 	return nil
 }
 
+func (c *Core) AddParticipant(pk string) {
+	c.participants[pk] = pk
+	c.hg.AddParticipant(pk)
+	// c.store.AddParticipant(key)
+
+}
+
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 func (c *Core) SignAndInsertSelfEvent(event hg.Event) error {
@@ -196,11 +203,13 @@ func (c *Core) EventDiff(known map[string]int) (events []hg.Event, err error) {
 		//get participant Events with index > ct
 		participantEvents, err := c.hg.Store.ParticipantEvents(pk, ct)
 		if err != nil {
+			fmt.Println("UNKNOWN PARTICIPANT", err)
 			return []hg.Event{}, err
 		}
 		for _, e := range participantEvents {
 			ev, err := c.hg.Store.GetEvent(e)
 			if err != nil {
+				fmt.Println("UNKNOWN PARTICIPANT2", err)
 				return []hg.Event{}, err
 			}
 			unknown = append(unknown, ev)

@@ -20,7 +20,7 @@ func initBadgerStore(cacheSize int, t *testing.T) (*BadgerStore, []pub) {
 		pubKey := crypto.FromECDSAPub(&key.PublicKey)
 		participantPubs = append(participantPubs,
 			pub{i, key, pubKey, fmt.Sprintf("0x%X", pubKey)})
-		participants[fmt.Sprintf("0x%X", pubKey)] = string(pubKey)
+		participants[fmt.Sprintf("0x%X", pubKey)] = fmt.Sprintf("0x%X", pubKey)
 	}
 
 	os.RemoveAll("test_data")
@@ -403,6 +403,7 @@ func TestBadgerEvents(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 		}
 		events[p.hex] = items
 	}
@@ -426,6 +427,7 @@ func TestBadgerEvents(t *testing.T) {
 	//check retrieving events per participant
 	skipIndex := -1 //do not skip any indexes
 	for _, p := range participants {
+		fmt.Println("PARTICIPANT HEX", p.hex)
 		pEvents, err := store.ParticipantEvents(p.hex, skipIndex)
 		if err != nil {
 			t.Fatal(err)
@@ -457,9 +459,9 @@ func TestBadgerEvents(t *testing.T) {
 		}
 	}
 
-	expectedKnown := make(map[int]int)
+	expectedKnown := make(map[string]int)
 	for _, p := range participants {
-		expectedKnown[p.id] = testSize - 1
+		expectedKnown[p.hex] = testSize - 1
 	}
 	known := store.KnownEvents()
 	if !reflect.DeepEqual(expectedKnown, known) {

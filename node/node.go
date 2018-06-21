@@ -2,6 +2,7 @@ package node
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
@@ -70,7 +71,7 @@ func NewNode(conf *Config,
 		conf:         conf,
 		core:         &core,
 		localAddr:    localAddr,
-		logger:       conf.Logger.WithField("this_id", id),
+		logger:       conf.Logger.WithField("this_id", hex.EncodeToString([]byte(id))),
 		peerSelector: peerSelector,
 		trans:        trans,
 		netCh:        trans.Consumer(),
@@ -561,8 +562,14 @@ func (n *Node) Shutdown() {
 	}
 }
 
-// func (n *Node) AddPeer(key []byte, addr string) map[string]string {
-// }
+func (n *Node) AddPeer(key []byte, addr string) {
+	n.peerSelector.AddPeer(net.Peer{
+		NetAddr:   addr,
+		PubKeyHex: fmt.Sprintf("0x%X", key),
+	})
+
+	n.core.AddParticipant(fmt.Sprintf("0x%X", key))
+}
 
 func (n *Node) GetStats() map[string]string {
 	toString := func(i *int) string {

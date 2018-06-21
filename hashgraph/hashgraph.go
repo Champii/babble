@@ -69,6 +69,11 @@ func NewHashgraph(participants map[string]string, store Store, commitCh chan Blo
 	return &hashgraph
 }
 
+func (h *Hashgraph) AddParticipant(pk string) {
+	h.Participants[pk] = pk
+	h.Store.AddParticipant(pk)
+}
+
 func (h *Hashgraph) SuperMajority() int {
 	return h.superMajority
 }
@@ -98,7 +103,11 @@ func (h *Hashgraph) ancestor(x, y string) bool {
 		return false
 	}
 
-	eyCreator := h.Participants[ey.Creator()]
+	eyCreator, ok := h.Participants[ey.Creator()]
+	if !ok {
+		return false
+	}
+
 	lastAncestorKnownFromYCreator := ex.lastAncestors[eyCreator].index
 
 	return lastAncestorKnownFromYCreator >= ey.Index()
@@ -367,7 +376,6 @@ func (h *Hashgraph) InsertEvent(event Event, setWireInfo bool) error {
 	}
 
 	if err := h.CheckSelfParent(event); err != nil {
-		fmt.Println("BABBLE: EVENT", event)
 		return fmt.Errorf("CheckSelfParent: %s", err)
 	}
 
@@ -520,35 +528,35 @@ func (h *Hashgraph) InitEventCoordinates(event *Event) error {
 			}
 		}
 	} else if selfParentError != nil {
-		otherParent.lastAncestors = make(map[string]EventCoordinates)
-		for id, val := range event.lastAncestors {
-			otherParent.lastAncestors[id] = val
+		event.lastAncestors = make(map[string]EventCoordinates)
+		for id, val := range otherParent.lastAncestors {
+			event.lastAncestors[id] = val
 		}
 
 		// copy(event.lastAncestors[:members], otherParent.lastAncestors)
 	} else if otherParentError != nil {
-		selfParent.lastAncestors = make(map[string]EventCoordinates)
-		for id, val := range event.lastAncestors {
-			selfParent.lastAncestors[id] = val
+		event.lastAncestors = make(map[string]EventCoordinates)
+		for id, val := range selfParent.lastAncestors {
+			event.lastAncestors[id] = val
 		}
 		// copy(event.lastAncestors[:members], selfParent.lastAncestors)
 	} else {
 		// selfParentLastAncestors := selfParent.lastAncestors
 		otherParentLastAncestors := otherParent.lastAncestors
 
-		selfParent.lastAncestors = make(map[string]EventCoordinates)
-		for id, val := range event.lastAncestors {
-			selfParent.lastAncestors[id] = val
+		event.lastAncestors = make(map[string]EventCoordinates)
+		for id, val := range selfParent.lastAncestors {
+			event.lastAncestors[id] = val
 		}
 
 		// copy(event.lastAncestors[:members], selfParentLastAncestors)
 		for hash := range h.Participants {
-			// TODO: CHECK HERE THAT THE VALUE IS WELL UPDATED IN THE MAP
-			// THIS IS A WORKAROUND
+
 			eventLastAncestors := event.lastAncestors[hash]
 			if eventLastAncestors.index < otherParentLastAncestors[hash].index {
 				eventLastAncestors.index = otherParentLastAncestors[hash].index
 				eventLastAncestors.hash = otherParentLastAncestors[hash].hash
+				event.lastAncestors[hash] = eventLastAncestors
 			}
 		}
 	}

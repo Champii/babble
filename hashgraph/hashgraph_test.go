@@ -28,14 +28,14 @@ var (
 )
 
 type Node struct {
-	ID     int
+	ID     string
 	Pub    []byte
 	PubHex string
 	Key    *ecdsa.PrivateKey
 	Events []Event
 }
 
-func NewNode(key *ecdsa.PrivateKey, id int) Node {
+func NewNode(key *ecdsa.PrivateKey, id string) Node {
 	pub := crypto.FromECDSAPub(&key.PublicKey)
 	node := Node{
 		ID:     id,
@@ -55,7 +55,7 @@ func (node *Node) signAndAddEvent(event Event, name string, index map[string]str
 }
 
 type play struct {
-	to          int
+	to          string
 	index       int
 	selfParent  string
 	otherParent string
@@ -80,38 +80,42 @@ e0  e1  e2
 */
 func initHashgraph(t *testing.T) (*Hashgraph, map[string]string) {
 	index := make(map[string]string)
-	nodes := []Node{}
+	nodes := map[string]Node{}
 	orderedEvents := &[]Event{}
 
 	for i := 0; i < n; i++ {
 		key, _ := crypto.GenerateECDSAKey()
-		node := NewNode(key, i)
+		node := NewNode(key, strconv.Itoa(i))
 		event := NewEvent(nil, nil, []string{"", ""}, node.Pub, 0)
 		node.signAndAddEvent(event, fmt.Sprintf("e%d", i), index, orderedEvents)
-		nodes = append(nodes, node)
+		nodes[strconv.Itoa(i)] = node
 	}
 
 	plays := []play{
-		play{0, 1, "e0", "e1", "e01", nil, nil},
-		play{2, 1, "e2", "", "s20", nil, nil},
-		play{1, 1, "e1", "", "s10", nil, nil},
-		play{0, 2, "e01", "", "s00", nil, nil},
-		play{2, 2, "s20", "s00", "e20", nil, nil},
-		play{1, 2, "s10", "e20", "e12", nil, nil},
+		play{"0", 1, "e0", "e1", "e01", nil, nil},
+		play{"2", 1, "e2", "", "s20", nil, nil},
+		play{"1", 1, "e1", "", "s10", nil, nil},
+		play{"0", 2, "e01", "", "s00", nil, nil},
+		play{"2", 2, "s20", "s00", "e20", nil, nil},
+		play{"1", 2, "s10", "e20", "e12", nil, nil},
 	}
 
 	for _, p := range plays {
+		nodeTo := nodes[p.to]
 		e := NewEvent(p.txPayload,
 			p.sigPayload,
 			[]string{index[p.selfParent], index[p.otherParent]},
-			nodes[p.to].Pub,
+			nodeTo.Pub,
 			p.index)
-		nodes[p.to].signAndAddEvent(e, p.name, index, orderedEvents)
+		nodeTo.signAndAddEvent(e, p.name, index, orderedEvents)
+		nodes[p.to] = nodeTo
 	}
 
 	participants := make(map[string]string)
+	i := 0
 	for _, node := range nodes {
 		participants[node.PubHex] = node.PubHex
+		i++
 	}
 
 	store := NewInmemStore(participants, cacheSize)
@@ -136,6 +140,8 @@ func initHashgraph(t *testing.T) (*Hashgraph, map[string]string) {
 
 func TestAncestor(t *testing.T) {
 	h, index := initHashgraph(t)
+
+	fmt.Println(index)
 
 	//1 generation
 	if !h.Ancestor(index["e01"], index["e0"]) {
@@ -322,7 +328,7 @@ func TestFork(t *testing.T) {
 
 	for i := 0; i < n; i++ {
 		key, _ := crypto.GenerateECDSAKey()
-		node := NewNode(key, i)
+		node := NewNode(key, strconv.Itoa(i))
 		nodes = append(nodes, node)
 		participants[node.PubHex] = node.PubHex
 	}
@@ -384,35 +390,37 @@ e0  e1  e2
 */
 func initRoundHashgraph(t *testing.T) (*Hashgraph, map[string]string) {
 	index := make(map[string]string)
-	nodes := []Node{}
+	nodes := map[string]Node{}
 	orderedEvents := &[]Event{}
 
 	for i := 0; i < n; i++ {
 		key, _ := crypto.GenerateECDSAKey()
-		node := NewNode(key, i)
+		node := NewNode(key, strconv.Itoa(i))
 		event := NewEvent(nil, nil, []string{"", ""}, node.Pub, 0)
 		node.signAndAddEvent(event, fmt.Sprintf("e%d", i), index, orderedEvents)
-		nodes = append(nodes, node)
+		nodes[strconv.Itoa(i)] = node
 	}
 
 	plays := []play{
-		play{1, 1, "e1", "e0", "e10", nil, nil},
-		play{2, 1, "e2", "", "s20", nil, nil},
-		play{0, 1, "e0", "", "s00", nil, nil},
-		play{2, 2, "s20", "e10", "e21", nil, nil},
-		play{0, 2, "s00", "e21", "e02", nil, nil},
-		play{1, 2, "e10", "", "s10", nil, nil},
-		play{1, 3, "s10", "e02", "f1", nil, nil},
-		play{1, 4, "f1", "", "s11", [][]byte{[]byte("abc")}, nil},
+		play{"1", 1, "e1", "e0", "e10", nil, nil},
+		play{"2", 1, "e2", "", "s20", nil, nil},
+		play{"0", 1, "e0", "", "s00", nil, nil},
+		play{"2", 2, "s20", "e10", "e21", nil, nil},
+		play{"0", 2, "s00", "e21", "e02", nil, nil},
+		play{"1", 2, "e10", "", "s10", nil, nil},
+		play{"1", 3, "s10", "e02", "f1", nil, nil},
+		play{"1", 4, "f1", "", "s11", [][]byte{[]byte("abc")}, nil},
 	}
 
 	for _, p := range plays {
+		nodeTo := nodes[p.to]
 		e := NewEvent(p.txPayload,
 			p.sigPayload,
 			[]string{index[p.selfParent], index[p.otherParent]},
-			nodes[p.to].Pub,
+			nodeTo.Pub,
 			p.index)
-		nodes[p.to].signAndAddEvent(e, p.name, index, orderedEvents)
+		nodeTo.signAndAddEvent(e, p.name, index, orderedEvents)
+		nodes[p.to] = nodeTo
 	}
 
 	participants := make(map[string]string)
@@ -432,8 +440,8 @@ func initRoundHashgraph(t *testing.T) (*Hashgraph, map[string]string) {
 func TestInsertEvent(t *testing.T) {
 	h, index := initRoundHashgraph(t)
 
-	expectedFirstDescendants := make([]EventCoordinates, n)
-	expectedLastAncestors := make([]EventCoordinates, n)
+	expectedFirstDescendants := make(map[string]EventCoordinates, n)
+	expectedLastAncestors := make(map[string]EventCoordinates, n)
 
 	//e0
 	e0, err := h.Store.GetEvent(index["e0"])
@@ -448,37 +456,6 @@ func TestInsertEvent(t *testing.T) {
 		t.Fatalf("Invalid wire info on e0")
 	}
 
-	expectedFirstDescendants[0] = EventCoordinates{
-		index: 0,
-		hash:  index["e0"],
-	}
-	expectedFirstDescendants[1] = EventCoordinates{
-		index: 1,
-		hash:  index["e10"],
-	}
-	expectedFirstDescendants[2] = EventCoordinates{
-		index: 2,
-		hash:  index["e21"],
-	}
-
-	expectedLastAncestors[0] = EventCoordinates{
-		index: 0,
-		hash:  index["e0"],
-	}
-	expectedLastAncestors[1] = EventCoordinates{
-		index: -1,
-	}
-	expectedLastAncestors[2] = EventCoordinates{
-		index: -1,
-	}
-
-	if !reflect.DeepEqual(e0.firstDescendants, expectedFirstDescendants) {
-		t.Fatal("e0 firstDescendants not good")
-	}
-	if !reflect.DeepEqual(e0.lastAncestors, expectedLastAncestors) {
-		t.Fatal("e0 lastAncestors not good")
-	}
-
 	//e21
 	e21, err := h.Store.GetEvent(index["e21"])
 	if err != nil {
@@ -490,44 +467,42 @@ func TestInsertEvent(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	expectedFirstDescendants[e0.Creator()] = EventCoordinates{
+		index: 0,
+		hash:  index["e0"],
+	}
+	expectedFirstDescendants[e10.Creator()] = EventCoordinates{
+		index: 1,
+		hash:  index["e10"],
+	}
+	expectedFirstDescendants[e21.Creator()] = EventCoordinates{
+		index: 2,
+		hash:  index["e21"],
+	}
+
+	expectedLastAncestors[e0.Creator()] = EventCoordinates{
+		index: 0,
+		hash:  index["e0"],
+	}
+	expectedLastAncestors[e10.Creator()] = EventCoordinates{
+		index: -1,
+	}
+	expectedLastAncestors[e21.Creator()] = EventCoordinates{
+		index: -1,
+	}
+
+	if !reflect.DeepEqual(e0.firstDescendants, expectedFirstDescendants) {
+		t.Fatal("e0 firstDescendants not good")
+	}
+	if !reflect.DeepEqual(e0.lastAncestors, expectedLastAncestors) {
+		t.Fatal("e0 lastAncestors not good")
+	}
+
 	if !(e21.Body.selfParentIndex == 1 &&
 		e21.Body.otherParentCreatorID == h.Participants[e10.Creator()] &&
 		e21.Body.otherParentIndex == 1 &&
 		e21.Body.creatorID == h.Participants[e21.Creator()]) {
 		t.Fatalf("Invalid wire info on e21")
-	}
-
-	expectedFirstDescendants[0] = EventCoordinates{
-		index: 2,
-		hash:  index["e02"],
-	}
-	expectedFirstDescendants[1] = EventCoordinates{
-		index: 3,
-		hash:  index["f1"],
-	}
-	expectedFirstDescendants[2] = EventCoordinates{
-		index: 2,
-		hash:  index["e21"],
-	}
-
-	expectedLastAncestors[0] = EventCoordinates{
-		index: 0,
-		hash:  index["e0"],
-	}
-	expectedLastAncestors[1] = EventCoordinates{
-		index: 1,
-		hash:  index["e10"],
-	}
-	expectedLastAncestors[2] = EventCoordinates{
-		index: 2,
-		hash:  index["e21"],
-	}
-
-	if !reflect.DeepEqual(e21.firstDescendants, expectedFirstDescendants) {
-		t.Fatal("e21 firstDescendants not good")
-	}
-	if !reflect.DeepEqual(e21.lastAncestors, expectedLastAncestors) {
-		t.Fatal("e21 lastAncestors not good")
 	}
 
 	//f1
@@ -543,26 +518,64 @@ func TestInsertEvent(t *testing.T) {
 		t.Fatalf("Invalid wire info on f1")
 	}
 
-	expectedFirstDescendants[0] = EventCoordinates{
-		index: math.MaxInt32,
-	}
-	expectedFirstDescendants[1] = EventCoordinates{
-		index: 3,
-		hash:  index["f1"],
-	}
-	expectedFirstDescendants[2] = EventCoordinates{
-		index: math.MaxInt32,
+	e02, err := h.Store.GetEvent(index["e02"])
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	expectedLastAncestors[0] = EventCoordinates{
+	expectedFirstDescendants[e02.Creator()] = EventCoordinates{
 		index: 2,
 		hash:  index["e02"],
 	}
-	expectedLastAncestors[1] = EventCoordinates{
+	expectedFirstDescendants[f1.Creator()] = EventCoordinates{
 		index: 3,
 		hash:  index["f1"],
 	}
-	expectedLastAncestors[2] = EventCoordinates{
+	expectedFirstDescendants[e21.Creator()] = EventCoordinates{
+		index: 2,
+		hash:  index["e21"],
+	}
+
+	expectedLastAncestors[e0.Creator()] = EventCoordinates{
+		index: 0,
+		hash:  index["e0"],
+	}
+	expectedLastAncestors[e10.Creator()] = EventCoordinates{
+		index: 1,
+		hash:  index["e10"],
+	}
+	expectedLastAncestors[e21.Creator()] = EventCoordinates{
+		index: 2,
+		hash:  index["e21"],
+	}
+
+	if !reflect.DeepEqual(e21.firstDescendants, expectedFirstDescendants) {
+		t.Fatal("e21 firstDescendants not good")
+	}
+	if !reflect.DeepEqual(e21.lastAncestors, expectedLastAncestors) {
+		t.Fatal("e21 lastAncestors not good")
+	}
+
+	expectedFirstDescendants[e0.Creator()] = EventCoordinates{
+		index: math.MaxInt32,
+	}
+	expectedFirstDescendants[e10.Creator()] = EventCoordinates{
+		index: 3,
+		hash:  index["f1"],
+	}
+	expectedFirstDescendants[e21.Creator()] = EventCoordinates{
+		index: math.MaxInt32,
+	}
+
+	expectedLastAncestors[e0.Creator()] = EventCoordinates{
+		index: 2,
+		hash:  index["e02"],
+	}
+	expectedLastAncestors[e10.Creator()] = EventCoordinates{
+		index: 3,
+		hash:  index["f1"],
+	}
+	expectedLastAncestors[e21.Creator()] = EventCoordinates{
 		index: 2,
 		hash:  index["e21"],
 	}
@@ -873,18 +886,18 @@ func contains(s []string, x string) bool {
 e0  e1  e2    Block (0, 1)
 0   1    2
 */
-func initBlockHashgraph(t *testing.T) (*Hashgraph, []Node, map[string]string) {
+func initBlockHashgraph(t *testing.T) (*Hashgraph, map[string]Node, map[string]string) {
 	index := make(map[string]string)
-	nodes := []Node{}
+	nodes := map[string]Node{}
 	orderedEvents := &[]Event{}
 
 	//create the initial events
 	for i := 0; i < n; i++ {
 		key, _ := crypto.GenerateECDSAKey()
-		node := NewNode(key, i)
+		node := NewNode(key, strconv.Itoa(i))
 		event := NewEvent(nil, nil, []string{"", ""}, node.Pub, 0)
 		node.signAndAddEvent(event, fmt.Sprintf("e%d", i), index, orderedEvents)
-		nodes = append(nodes, node)
+		nodes[strconv.Itoa(i)] = node
 	}
 
 	participants := make(map[string]string)
@@ -917,7 +930,7 @@ func TestInsertEventsWithBlockSignatures(t *testing.T) {
 		t.Fatalf("Error reteiving block 0. %s", err)
 	}
 
-	blockSigs := make([]BlockSignature, n)
+	blockSigs := make(map[string]BlockSignature, n)
 	for k, n := range nodes {
 		blockSigs[k], err = block.Sign(n.Key)
 		if err != nil {
@@ -936,9 +949,9 @@ func TestInsertEventsWithBlockSignatures(t *testing.T) {
 			0   1    2
 		*/
 		plays := []play{
-			play{1, 1, "e1", "e0", "e10", nil, []BlockSignature{blockSigs[1]}},
-			play{2, 1, "e2", "", "s20", nil, []BlockSignature{blockSigs[2]}},
-			play{0, 1, "e0", "", "s00", nil, []BlockSignature{blockSigs[0]}},
+			play{"1", 1, "e1", "e0", "e10", nil, []BlockSignature{blockSigs["1"]}},
+			play{"2", 1, "e2", "", "s20", nil, []BlockSignature{blockSigs["2"]}},
+			play{"0", 1, "e0", "", "s00", nil, []BlockSignature{blockSigs["0"]}},
 		}
 
 		for _, p := range plays {
@@ -966,15 +979,15 @@ func TestInsertEventsWithBlockSignatures(t *testing.T) {
 		//The block signature is simply ignored
 
 		block1 := NewBlock(1, 2, [][]byte{})
-		sig, _ := block1.Sign(nodes[2].Key)
+		sig, _ := block1.Sign(nodes["2"].Key)
 
 		//unknown block
 		unknownBlockSig := BlockSignature{
-			Validator: nodes[2].Pub,
+			Validator: nodes["2"].Pub,
 			Index:     1,
 			Signature: sig.Signature,
 		}
-		p := play{2, 2, "s20", "e10", "e21", nil, []BlockSignature{unknownBlockSig}}
+		p := play{"1", 2, "s20", "e10", "e21", nil, []BlockSignature{unknownBlockSig}}
 
 		e := NewEvent(nil,
 			p.sigPayload,
@@ -983,6 +996,7 @@ func TestInsertEventsWithBlockSignatures(t *testing.T) {
 			p.index)
 		e.Sign(nodes[p.to].Key)
 		index[p.name] = e.Hex()
+		fmt.Println("INSERT EVENT", e)
 		if err := h.InsertEvent(e, true); err != nil {
 			t.Fatalf("ERROR inserting event %s: %s", p.name, err)
 		}
@@ -1002,10 +1016,10 @@ func TestInsertEventsWithBlockSignatures(t *testing.T) {
 		//wrong validator
 		//Validator should be same as Event creator (node 0)
 		key, _ := crypto.GenerateECDSAKey()
-		badNode := NewNode(key, 666)
+		badNode := NewNode(key, strconv.Itoa(666))
 		badNodeSig, _ := block.Sign(badNode.Key)
 
-		p := play{0, 2, "s00", "e21", "e02", nil, []BlockSignature{badNodeSig}}
+		p := play{"0", 2, "s00", "e21", "e02", nil, []BlockSignature{badNodeSig}}
 
 		e := NewEvent(nil,
 			p.sigPayload,
@@ -1075,49 +1089,50 @@ func TestInsertEventsWithBlockSignatures(t *testing.T) {
 */
 func initConsensusHashgraph(db bool, logger *logrus.Logger) (*Hashgraph, map[string]string) {
 	index := make(map[string]string)
-	nodes := []Node{}
+	nodes := map[string]Node{}
 	orderedEvents := &[]Event{}
 
 	for i := 0; i < n; i++ {
 		key, _ := crypto.GenerateECDSAKey()
-		node := NewNode(key, i)
+		node := NewNode(key, strconv.Itoa(i))
 		event := NewEvent(nil, nil, []string{"", ""}, node.Pub, 0)
 		node.signAndAddEvent(event, fmt.Sprintf("e%d", i), index, orderedEvents)
-		nodes = append(nodes, node)
+		nodes[strconv.Itoa(i)] = node
 	}
 
 	plays := []play{
-		play{1, 1, "e1", "e0", "e10", nil, nil},
-		play{2, 1, "e2", "e10", "e21", [][]byte{[]byte("e21")}, nil},
-		play{2, 2, "e21", "", "e21b", nil, nil},
-		play{0, 1, "e0", "e21b", "e02", nil, nil},
-		play{1, 2, "e10", "e02", "f1", nil, nil},
-		play{1, 3, "f1", "", "f1b", [][]byte{[]byte("f1b")}, nil},
-		play{0, 2, "e02", "f1b", "f0", nil, nil},
-		play{2, 3, "e21b", "f1b", "f2", nil, nil},
-		play{1, 4, "f1b", "f0", "f10", nil, nil},
-		play{2, 4, "f2", "f10", "f21", nil, nil},
-		play{0, 3, "f0", "f21", "f02", nil, nil},
-		play{0, 4, "f02", "", "f02b", [][]byte{[]byte("e21")}, nil},
-		play{1, 5, "f10", "f02b", "g1", nil, nil},
-		play{0, 5, "f02b", "g1", "g0", nil, nil},
-		play{2, 5, "f21", "g1", "g2", nil, nil},
-		play{1, 6, "g1", "g0", "g10", nil, nil},
-		play{0, 6, "g0", "f21", "o02", nil, nil},
-		play{2, 6, "g2", "g10", "g21", nil, nil},
-		play{0, 7, "o02", "g21", "g02", nil, nil},
-		play{1, 7, "g10", "g02", "h1", nil, nil},
-		play{0, 8, "g02", "h1", "h0", nil, nil},
-		play{2, 7, "g21", "h1", "h2", nil, nil},
+		play{"1", 1, "e1", "e0", "e10", nil, nil},
+		play{"2", 1, "e2", "e10", "e21", [][]byte{[]byte("e21")}, nil},
+		play{"2", 2, "e21", "", "e21b", nil, nil},
+		play{"0", 1, "e0", "e21b", "e02", nil, nil},
+		play{"1", 2, "e10", "e02", "f1", nil, nil},
+		play{"1", 3, "f1", "", "f1b", [][]byte{[]byte("f1b")}, nil},
+		play{"0", 2, "e02", "f1b", "f0", nil, nil},
+		play{"2", 3, "e21b", "f1b", "f2", nil, nil},
+		play{"1", 4, "f1b", "f0", "f10", nil, nil},
+		play{"2", 4, "f2", "f10", "f21", nil, nil},
+		play{"0", 3, "f0", "f21", "f02", nil, nil},
+		play{"0", 4, "f02", "", "f02b", [][]byte{[]byte("e21")}, nil},
+		play{"1", 5, "f10", "f02b", "g1", nil, nil},
+		play{"0", 5, "f02b", "g1", "g0", nil, nil},
+		play{"2", 5, "f21", "g1", "g2", nil, nil},
+		play{"1", 6, "g1", "g0", "g10", nil, nil},
+		play{"0", 6, "g0", "f21", "o02", nil, nil},
+		play{"2", 6, "g2", "g10", "g21", nil, nil},
+		play{"0", 7, "o02", "g21", "g02", nil, nil},
+		play{"1", 7, "g10", "g02", "h1", nil, nil},
+		play{"0", 8, "g02", "h1", "h0", nil, nil},
+		play{"2", 7, "g21", "h1", "h2", nil, nil},
 	}
 
 	for _, p := range plays {
+		nodeTo := nodes[p.to]
 		e := NewEvent(p.txPayload,
 			p.sigPayload,
 			[]string{index[p.selfParent], index[p.otherParent]},
-			nodes[p.to].Pub,
+			nodeTo.Pub,
 			p.index)
-		nodes[p.to].signAndAddEvent(e, p.name, index, orderedEvents)
+		nodeTo.signAndAddEvent(e, p.name, index, orderedEvents)
 	}
 
 	participants := make(map[string]string)
@@ -1292,10 +1307,16 @@ func BenchmarkFindOrder(b *testing.B) {
 func TestKnown(t *testing.T) {
 	h, _ := initConsensusHashgraph(false, common.NewTestLogger(t))
 
-	expectedKnown := map[string]int{
-		"0": 8,
-		"1": 7,
-		"2": 7,
+	expectedKnown := map[string]int{}
+
+	values := []int{
+		8, 7, 7,
+	}
+
+	i := 0
+	for _, id := range h.Participants {
+		expectedKnown[id] = values[i]
+		i++
 	}
 
 	known := h.KnownEvents()
@@ -1327,26 +1348,35 @@ func TestReset(t *testing.T) {
 	}
 
 	roots := map[string]Root{}
-	roots[h.Participants["0"]] = Root{
-		X:     index["f02b"],
-		Y:     index["g1"],
-		Index: 4,
-		Round: 2,
-		Others: map[string]string{
-			index["o02"]: index["f21"],
+
+	values := []Root{
+		Root{
+			X:     index["f02b"],
+			Y:     index["g1"],
+			Index: 4,
+			Round: 2,
+			Others: map[string]string{
+				index["o02"]: index["f21"],
+			},
+		},
+		Root{
+			X:     index["f10"],
+			Y:     index["f02b"],
+			Index: 4,
+			Round: 2,
+		},
+		Root{
+			X:     index["f21"],
+			Y:     index["g1"],
+			Index: 4,
+			Round: 2,
 		},
 	}
-	roots[h.Participants["1"]] = Root{
-		X:     index["f10"],
-		Y:     index["f02b"],
-		Index: 4,
-		Round: 2,
-	}
-	roots[h.Participants["2"]] = Root{
-		X:     index["f21"],
-		Y:     index["g1"],
-		Index: 4,
-		Round: 2,
+
+	i := 0
+	for _, id := range h.Participants {
+		roots[id] = values[i]
+		i++
 	}
 
 	err := h.Reset(roots)
@@ -1363,10 +1393,12 @@ func TestReset(t *testing.T) {
 		}
 	}
 
-	expectedKnown := map[string]int{
-		"0": 8,
-		"1": 7,
-		"2": 7,
+	expectedKnown := map[string]int{}
+	v := []int{8, 7, 7}
+	i = 0
+	for _, id := range h.Participants {
+		expectedKnown[id] = v[i]
+		i++
 	}
 
 	known := h.KnownEvents()
@@ -1627,56 +1659,57 @@ func TestBootstrap(t *testing.T) {
 
 func initFunkyHashgraph(logger *logrus.Logger) (*Hashgraph, map[string]string) {
 	index := make(map[string]string)
-	nodes := []Node{}
+	nodes := map[string]Node{}
 	orderedEvents := &[]Event{}
 
 	n := 4
 	for i := 0; i < n; i++ {
 		key, _ := crypto.GenerateECDSAKey()
-		node := NewNode(key, i)
+		node := NewNode(key, strconv.Itoa(i))
 		name := fmt.Sprintf("w0%d", i)
 		event := NewEvent([][]byte{[]byte(name)}, nil, []string{"", ""}, node.Pub, 0)
 		node.signAndAddEvent(event, name, index, orderedEvents)
-		nodes = append(nodes, node)
+		nodes[strconv.Itoa(i)] = node
 	}
 
 	plays := []play{
-		play{2, 1, "w02", "w03", "a23", [][]byte{[]byte("a23")}, nil},
-		play{1, 1, "w01", "a23", "a12", [][]byte{[]byte("a12")}, nil},
-		play{0, 1, "w00", "", "a00", [][]byte{[]byte("a00")}, nil},
-		play{1, 2, "a12", "a00", "a10", [][]byte{[]byte("a10")}, nil},
-		play{2, 2, "a23", "a12", "a21", [][]byte{[]byte("a21")}, nil},
-		play{3, 1, "w03", "a21", "w13", [][]byte{[]byte("w13")}, nil},
-		play{2, 3, "a21", "w13", "w12", [][]byte{[]byte("w12")}, nil},
-		play{1, 3, "a10", "w12", "w11", [][]byte{[]byte("w11")}, nil},
-		play{0, 2, "a00", "w11", "w10", [][]byte{[]byte("w10")}, nil},
-		play{2, 4, "w12", "w11", "b21", [][]byte{[]byte("b21")}, nil},
-		play{3, 2, "w13", "b21", "w23", [][]byte{[]byte("w23")}, nil},
-		play{1, 4, "w11", "w23", "w21", [][]byte{[]byte("w21")}, nil},
-		play{0, 3, "w10", "", "b00", [][]byte{[]byte("b00")}, nil},
-		play{1, 5, "w21", "b00", "c10", [][]byte{[]byte("c10")}, nil},
-		play{2, 5, "b21", "c10", "w22", [][]byte{[]byte("w22")}, nil},
-		play{0, 4, "b00", "w22", "w20", [][]byte{[]byte("w20")}, nil},
-		play{1, 6, "c10", "w20", "w31", [][]byte{[]byte("w31")}, nil},
-		play{2, 6, "w22", "w31", "w32", [][]byte{[]byte("w32")}, nil},
-		play{0, 5, "w20", "w32", "w30", [][]byte{[]byte("w30")}, nil},
-		play{3, 3, "w23", "w32", "w33", [][]byte{[]byte("w33")}, nil},
-		play{1, 7, "w31", "w33", "d13", [][]byte{[]byte("d13")}, nil},
-		play{0, 6, "w30", "d13", "w40", [][]byte{[]byte("w40")}, nil},
-		play{1, 8, "d13", "w40", "w41", [][]byte{[]byte("w41")}, nil},
-		play{2, 7, "w32", "w41", "w42", [][]byte{[]byte("w42")}, nil},
-		play{3, 4, "w33", "w42", "w43", [][]byte{[]byte("w43")}, nil},
-		play{2, 8, "w42", "w43", "e23", [][]byte{[]byte("e23")}, nil},
-		play{1, 9, "w41", "e23", "w51", [][]byte{[]byte("w51")}, nil},
+		play{"2", 1, "w02", "w03", "a23", [][]byte{[]byte("a23")}, nil},
+		play{"1", 1, "w01", "a23", "a12", [][]byte{[]byte("a12")}, nil},
+		play{"0", 1, "w00", "", "a00", [][]byte{[]byte("a00")}, nil},
+		play{"1", 2, "a12", "a00", "a10", [][]byte{[]byte("a10")}, nil},
+		play{"2", 2, "a23", "a12", "a21", [][]byte{[]byte("a21")}, nil},
+		play{"3", 1, "w03", "a21", "w13", [][]byte{[]byte("w13")}, nil},
+		play{"2", 3, "a21", "w13", "w12", [][]byte{[]byte("w12")}, nil},
+		play{"1", 3, "a10", "w12", "w11", [][]byte{[]byte("w11")}, nil},
+		play{"0", 2, "a00", "w11", "w10", [][]byte{[]byte("w10")}, nil},
+		play{"2", 4, "w12", "w11", "b21", [][]byte{[]byte("b21")}, nil},
+		play{"3", 2, "w13", "b21", "w23", [][]byte{[]byte("w23")}, nil},
+		play{"1", 4, "w11", "w23", "w21", [][]byte{[]byte("w21")}, nil},
+		play{"0", 3, "w10", "", "b00", [][]byte{[]byte("b00")}, nil},
+		play{"1", 5, "w21", "b00", "c10", [][]byte{[]byte("c10")}, nil},
+		play{"2", 5, "b21", "c10", "w22", [][]byte{[]byte("w22")}, nil},
+		play{"0", 4, "b00", "w22", "w20", [][]byte{[]byte("w20")}, nil},
+		play{"1", 6, "c10", "w20", "w31", [][]byte{[]byte("w31")}, nil},
+		play{"2", 6, "w22", "w31", "w32", [][]byte{[]byte("w32")}, nil},
+		play{"0", 5, "w20", "w32", "w30", [][]byte{[]byte("w30")}, nil},
+		play{"3", 3, "w23", "w32", "w33", [][]byte{[]byte("w33")}, nil},
+		play{"1", 7, "w31", "w33", "d13", [][]byte{[]byte("d13")}, nil},
+		play{"0", 6, "w30", "d13", "w40", [][]byte{[]byte("w40")}, nil},
+		play{"1", 8, "d13", "w40", "w41", [][]byte{[]byte("w41")}, nil},
+		play{"2", 7, "w32", "w41", "w42", [][]byte{[]byte("w42")}, nil},
+		play{"3", 4, "w33", "w42", "w43", [][]byte{[]byte("w43")}, nil},
+		play{"2", 8, "w42", "w43", "e23", [][]byte{[]byte("e23")}, nil},
+		play{"1", 9, "w41", "e23", "w51", [][]byte{[]byte("w51")}, nil},
 	}
 
 	for _, p := range plays {
+		nodeTo := nodes[p.to]
 		e := NewEvent(p.txPayload,
 			p.sigPayload,
 			[]string{index[p.selfParent], index[p.otherParent]},
-			nodes[p.to].Pub,
+			nodeTo.Pub,
 			p.index)
-		nodes[p.to].signAndAddEvent(e, p.name, index, orderedEvents)
+		nodeTo.signAndAddEvent(e, p.name, index, orderedEvents)
 	}
 
 	participants := make(map[string]string)

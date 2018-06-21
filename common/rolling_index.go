@@ -1,6 +1,8 @@
 package common
 
-import "strconv"
+import (
+	"strconv"
+)
 
 type RollingIndex struct {
 	size      int
@@ -67,6 +69,7 @@ func (r *RollingIndex) Set(item interface{}, index int) error {
 			r.Roll()
 		}
 		r.items = append(r.items, item)
+
 		r.lastIndex = index
 		return nil
 	}

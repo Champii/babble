@@ -18,6 +18,12 @@ func NewRollingIndexMap(size int, keys []string) *RollingIndexMap {
 	}
 }
 
+func (rim *RollingIndexMap) AddParticipant(key string) {
+	rim.size++
+	rim.keys = append(rim.keys, key)
+	rim.mapping[key] = NewRollingIndex(rim.size)
+}
+
 //return key items with index > skip
 func (rim *RollingIndexMap) Get(key string, skipIndex int) ([]interface{}, error) {
 	items, ok := rim.mapping[key]

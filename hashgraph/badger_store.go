@@ -130,6 +130,10 @@ func (s *BadgerStore) CacheSize() int {
 	return s.inmemStore.CacheSize()
 }
 
+func (s *BadgerStore) AddParticipant(key string) error {
+	s.participants[key] = key
+	return nil
+}
 func (s *BadgerStore) Participants() (map[string]string, error) {
 	return s.participants, nil
 }

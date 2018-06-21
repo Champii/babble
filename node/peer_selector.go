@@ -9,6 +9,7 @@ import (
 type PeerSelector interface {
 	Peers() []net.Peer
 	UpdateLast(peer string)
+	AddPeer(peer net.Peer)
 	Next() net.Peer
 }
 
@@ -29,6 +30,10 @@ func NewRandomPeerSelector(participants []net.Peer, localAddr string) *RandomPee
 
 func (ps *RandomPeerSelector) Peers() []net.Peer {
 	return ps.peers
+}
+
+func (ps *RandomPeerSelector) AddPeer(peer net.Peer) {
+	ps.peers = append(ps.peers, peer)
 }
 
 func (ps *RandomPeerSelector) UpdateLast(peer string) {

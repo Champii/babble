@@ -3,6 +3,7 @@ package hashgraph
 type Store interface {
 	CacheSize() int
 	Participants() (map[string]string, error)
+	AddParticipant(string) error
 	GetEvent(string) (Event, error)
 	SetEvent(Event) error
 	ParticipantEvents(string, int) ([]string, error)

@@ -45,6 +45,14 @@ func (s *InmemStore) Participants() (map[string]string, error) {
 	return s.participants, nil
 }
 
+func (s *InmemStore) AddParticipant(pk string) error {
+	s.roots[pk] = NewBaseRoot()
+
+	s.participantEventsCache.AddParticipant(pk)
+
+	return nil
+}
+
 func (s *InmemStore) GetEvent(key string) (Event, error) {
 	res, ok := s.eventCache.Get(key)
 	if !ok {

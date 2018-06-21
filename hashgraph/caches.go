@@ -52,21 +52,20 @@ func NewParticipantEventsCache(size int, participants map[string]string) *Partic
 }
 
 func (pec *ParticipantEventsCache) participantID(participant string) (string, error) {
-	id, ok := pec.participants[participant]
-	if !ok {
-		return "", cm.NewStoreErr(cm.UnknownParticipant, participant)
-	}
-	return id, nil
+	return participant, nil
+}
+
+func (pec *ParticipantEventsCache) AddParticipant(participant string) {
+	pec.participants[participant] = participant
+
+	pec.Set(participant, participant, 0)
+	pec.rim.AddParticipant(participant)
+
 }
 
 //return participant events with index > skip
 func (pec *ParticipantEventsCache) Get(participant string, skipIndex int) ([]string, error) {
-	id, err := pec.participantID(participant)
-	if err != nil {
-		return []string{}, err
-	}
-
-	pe, err := pec.rim.Get(id, skipIndex)
+	pe, err := pec.rim.Get(participant, skipIndex)
 	if err != nil {
 		return []string{}, err
 	}
@@ -79,12 +78,7 @@ func (pec *ParticipantEventsCache) Get(participant string, skipIndex int) ([]str
 }
 
 func (pec *ParticipantEventsCache) GetItem(participant string, index int) (string, error) {
-	id, err := pec.participantID(participant)
-	if err != nil {
-		return "", err
-	}
-
-	item, err := pec.rim.GetItem(id, index)
+	item, err := pec.rim.GetItem(participant, index)
 	if err != nil {
 		return "", err
 	}
@@ -92,12 +86,7 @@ func (pec *ParticipantEventsCache) GetItem(participant string, index int) (strin
 }
 
 func (pec *ParticipantEventsCache) GetLast(participant string) (string, error) {
-	id, err := pec.participantID(participant)
-	if err != nil {
-		return "", err
-	}
-
-	last, err := pec.rim.GetLast(id)
+	last, err := pec.rim.GetLast(participant)
 	if err != nil {
 		return "", err
 	}

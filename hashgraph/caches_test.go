@@ -12,9 +12,9 @@ func TestParticipantEventsCache(t *testing.T) {
 	size := 10
 	testSize := 25
 	participants := map[string]string{
-		"alice":   "0",
-		"bob":     "1",
-		"charlie": "2",
+		"alice":   "alice",
+		"bob":     "bob",
+		"charlie": "charlie",
 	}
 	pec := NewParticipantEventsCache(size, participants)
 
